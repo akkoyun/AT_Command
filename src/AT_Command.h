@@ -972,7 +972,7 @@
 			}
 
 			// SIMDET Function
-			bool SIMDET(const bool _Function_Type, uint8_t _Mode, uint8_t & _SIM_in_Pin_State) {
+			bool SIMDET(const bool _Function_Type, uint8_t _Mode, bool & _SIM_in_Pin_State) {
 
 				// SET Function
 				if (_Function_Type == SET) {
@@ -1041,14 +1041,24 @@
 
 						// \r\n#SIMDET: 2,1\r\n\r\nOK\r\n
 
-						// Handle Query Answer
-						uint8_t _Parsed_Variable = sscanf(_Buffer_Variable, "\r\n#SIMDET: %01hhu,%01d\r\n\r\nOK\r\n", &_Mode, &_SIM_in_Pin_State);
+						// Read SIMDET Mode
+						_Mode = _Buffer_Variable[11];
 
-						// Assign SIM State
-						if (_Parsed_Variable == 2) return (true);
+						// Read Pin State
+						if (_Buffer_Variable[13] == 1) {
+							
+							// Set Variable
+							_SIM_in_Pin_State = true;
+
+						} else {
+
+							// Set Variable
+							_SIM_in_Pin_State = false;
+
+						}
 
 						// End Function
-						return (false);
+						return (true);
 
 					}
 
