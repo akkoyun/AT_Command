@@ -972,7 +972,7 @@
 			}
 
 			// SIMDET Function
-			bool SIMDET(const bool _Function_Type, uint8_t _Mode, bool & _SIM_in_Pin_State) {
+			bool SIMDET(const bool _Function_Type, uint8_t _Mode, uint8_t & _SIM_in_Pin_State) {
 
 				// SET Function
 				if (_Function_Type == SET) {
@@ -1042,7 +1042,7 @@
 						// \r\n#SIMDET: 2,1\r\n\r\nOK\r\n
 
 						// Handle Query Answer
-						uint8_t _Parsed_Variable = sscanf(_Buffer_Variable, "\r\n#SIMDET: %01hhu,%01hhu\r\n\r\nOK\r\n", &_Mode, &_SIM_in_Pin_State);
+						uint8_t _Parsed_Variable = sscanf(_Buffer_Variable, "\r\n#SIMDET: %01hhu,%01d\r\n\r\nOK\r\n", &_Mode, &_SIM_in_Pin_State);
 
 						// Assign SIM State
 						if (_Parsed_Variable == 2) return (true);
@@ -2215,9 +2215,6 @@
 				GSM_Serial->print(_ConnMode);
 				GSM_Serial->write(0x0D);
 				GSM_Serial->write(0x0A);
-
-				// Read Current Time
-				const uint32_t Current_Time = millis();
 
 				// \r\nOK\r\n\r\nSRING: 2,86\r\n
 
