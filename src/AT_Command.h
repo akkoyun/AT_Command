@@ -22,6 +22,11 @@
 	// Telit LE910C1_EUX Class
 	class LE910C1_EUX {
 
+		// Define Modem Name
+		#ifndef _LE910C1_EUX_
+			#define _LE910C1_EUX_
+		#endif
+
 		// Private Variables
 		private:
 
@@ -92,7 +97,7 @@
 			}
 
 			// OK Find Function
-			uint8_t Find(char * _Buffer, uint16_t _Size) {
+			uint8_t Find(char * _Buffer, const uint16_t _Size) {
 
 				// Declare Response Variable
 				uint8_t _Response = _AT_TIMEOUT_;
@@ -310,7 +315,7 @@
 			}
 
 			// RSSI to Signal Quality Function
-			uint8_t RSSI_to_Signal_Quality(uint8_t _RSSI) {
+			uint8_t RSSI_to_Signal_Quality(const uint8_t _RSSI) {
 
 				// Handle for RSSI
 				if (_RSSI >= -65) {
@@ -386,6 +391,9 @@
 
 			// Set Connection Mode Function
 			bool FCLASS(const uint8_t _FCLASS = 0) {
+
+				// Control for Parameter
+				if (_FCLASS != 0 and _FCLASS != 8) return(false);
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -672,12 +680,7 @@
 			bool CFUN(const uint8_t _Fun = 1) {
 
 				// Control for Parameter
-				if (_Fun != 0 and _Fun != 1 and _Fun != 4 and _Fun != 5 and _Fun != 12) {
-					
-					// End Function
-					return(false);
-
-				} 
+				if (_Fun != 0 and _Fun != 1 and _Fun != 4 and _Fun != 5 and _Fun != 12) return(false);
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -969,7 +972,7 @@
 			}
 
 			// SIMDET Function
-			bool SIMDET(const bool _Function_Type = GET, uint8_t _Mode, bool & _SIM_in_Pin_State) {
+			bool SIMDET(const bool _Function_Type = GET, uint8_t _Mode = 2, bool & _SIM_in_Pin_State) {
 
 				// SET Function
 				if (_Function_Type == SET) {
@@ -1102,6 +1105,9 @@
 			// Set SLED Function
 			bool SLED(const uint8_t _SLED = 2) {
 
+				// Control for Parameter
+				if (_SLED != 0 and _SLED != 1 and _SLED != 2 and _SLED != 3 and _SLED != 4 and _SLED != 5) return(false);
+
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
 
@@ -1164,6 +1170,9 @@
 
 			// Set Socket Listen Ring Indicator Function
 			bool E2SLRI(const uint16_t _Pulse_Duration = 50) {
+
+				// Control for Parameter
+				if (_Pulse_Duration < 50 || _Pulse_Duration > 1150) return(false);
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
