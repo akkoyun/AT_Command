@@ -50,6 +50,7 @@
 #define _AT_ERROR_					    	(uint8_t)2
 #define _AT_CME_					    	(uint8_t)3
 #define _AT_SD_PROMPT_                  	(uint8_t)4
+#define _AT_SRING_                  		(uint8_t)5
 
 // Define HTTP Method
 // ------------------

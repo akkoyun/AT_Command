@@ -67,16 +67,13 @@
 				const uint32_t _Current_Time = millis();
 
 				// Read UART Response
-				while (!_Buffer->Response) {
+				while (GSM_Serial->available() > 0) {
 
 					// Read Serial Char
 					_Buffer_Variable[_Buffer->Read_Order] = GSM_Serial->read();
 
 					// Control for Response
-					if (this->Find(_AT_OK_, _Buffer_Variable, _Buffer->Read_Order)) _Buffer->Response = _AT_OK_;
-					if (this->Find(_AT_ERROR_, _Buffer_Variable, _Buffer->Read_Order)) _Buffer->Response = _AT_ERROR_;
-					if (this->Find(_AT_CME_, _Buffer_Variable, _Buffer->Read_Order)) _Buffer->Response = _AT_CME_;
-					if (this->Find(_AT_SD_PROMPT_, _Buffer_Variable, _Buffer->Read_Order)) _Buffer->Response = _AT_SD_PROMPT_;
+					_Buffer->Response = this->Find(_Buffer_Variable, _Buffer->Read_Order);
 
 					// Increase Read Order
 					if (isAscii(_Buffer_Variable[_Buffer->Read_Order])) _Buffer->Read_Order++;
@@ -95,10 +92,27 @@
 			}
 
 			// OK Find Function
-			bool Find(const uint8_t _Type, char * _Buffer, uint16_t _Size) {
+			uint8_t Find(char * _Buffer, uint16_t _Size) {
 
-				// Select Find Type
-				if (_Type == _AT_OK_ and _Size > 4) {
+				// Declare Response Variable
+				uint8_t _Response = _AT_TIMEOUT_;
+
+				// Control for "\r\n> "
+				if (_Size > 3) {
+
+					// \r\n> 
+					// Control for <\r\n> > Response
+					if (
+						(_Buffer[_Size - 3] == 13) && 	// \r
+						(_Buffer[_Size - 2] == 10) && 	// \n
+						(_Buffer[_Size - 1] == 62) && 	// >
+						(_Buffer[_Size - 0] == 32)		// " "
+					) _Response = _AT_SD_PROMPT_;
+
+				} 
+
+				// Control "\r\nOK\r\n"
+				if (_Size > 5) {
 
 					// \r\nOK\r\n
 					// Control for <\r\nOK\r\n> Response
@@ -108,10 +122,13 @@
 						(_Buffer[_Size - 3] == 79) && 	// O
 						(_Buffer[_Size - 2] == 75) && 	// K
 						(_Buffer[_Size - 1] == 13) && 	// \r
-						(_Buffer[_Size - 0] == 10)		// \n
-					) return(true);
+						(_Buffer[_Size - 0] == 10)  	// \n
+					) _Response = _AT_OK_;
 
-				} else if (_Type == _AT_ERROR_ and _Size > 7) {
+				}
+
+				// Control for "\r\nERROR\r\n"
+				if (_Size > 8) {
 
 					// \r\nERROR\r\n
 					// Control for <\r\nERROR\r\n> Response
@@ -125,9 +142,144 @@
 						(_Buffer[_Size - 2] == 82) && 	// R
 						(_Buffer[_Size - 1] == 13) && 	// \r
 						(_Buffer[_Size - 0] == 10)		// \n
-					) return(true);
+					) _Response = _AT_ERROR_;
 
-				} else if (_Type == _AT_CME_ and _Size > 15) {
+				}
+
+				// Control for "\r\nSRING: 3\r\n"
+				if (_Size > 11) {
+
+					// \r\nSRING: 3\r\n
+					if (
+						(_Buffer[_Size - 11] == 13) && 	// \r
+						(_Buffer[_Size - 10] == 10) && 	// \n
+						(_Buffer[_Size - 9] == 83) && 	// S
+						(_Buffer[_Size - 8] == 82) && 	// R
+						(_Buffer[_Size - 7] == 73) && 	// I
+						(_Buffer[_Size - 6] == 78) && 	// N
+						(_Buffer[_Size - 5] == 71) && 	// G
+						(_Buffer[_Size - 4] == 58) && 	// :
+						(_Buffer[_Size - 3] == 32) && 	// " "
+						(_Buffer[_Size - 1] == 13) && 	// \r
+						(_Buffer[_Size - 0] == 10)		// \n
+					) _Response = _AT_SRING_;
+
+				}
+
+				// Control for "\r\nSRING: 3,6\r\n"
+				if (_Size > 13) {
+
+					// \r\nSRING: 3,6\r\n
+					if (
+						(_Buffer[_Size - 13] == 13) && 	// \r
+						(_Buffer[_Size - 12] == 10) && 	// \n
+						(_Buffer[_Size - 11] == 83) && 	// S
+						(_Buffer[_Size - 10] == 82) && 	// R
+						(_Buffer[_Size - 9] == 73) && 	// I
+						(_Buffer[_Size - 8] == 78) && 	// N
+						(_Buffer[_Size - 7] == 71) && 	// G
+						(_Buffer[_Size - 6] == 58) && 	// :
+						(_Buffer[_Size - 5] == 32) && 	// " "
+						(_Buffer[_Size - 1] == 13) && 	// \r
+						(_Buffer[_Size - 0] == 10)		// \n
+					) _Response = _AT_SRING_;
+
+				}
+
+				// Control for "\r\nSRING: 3,16\r\n"
+				if (_Size > 14) {
+
+					// \r\nSRING: 3,16\r\n
+					if (
+						(_Buffer[_Size - 14] == 13) && 	// \r
+						(_Buffer[_Size - 13] == 10) && 	// \n
+						(_Buffer[_Size - 12] == 83) && 	// S
+						(_Buffer[_Size - 11] == 82) && 	// R
+						(_Buffer[_Size - 10] == 73) && 	// I
+						(_Buffer[_Size - 9] == 78) && 	// N
+						(_Buffer[_Size - 8] == 71) && 	// G
+						(_Buffer[_Size - 7] == 58) && 	// :
+						(_Buffer[_Size - 6] == 32) && 	// " "
+						(_Buffer[_Size - 1] == 13) && 	// \r
+						(_Buffer[_Size - 0] == 10)		// \n
+					) _Response = _AT_SRING_;
+
+				}
+
+				// Control for "\r\nSRING: 3,166\r\n"
+				if (_Size > 15) {
+
+					// \r\nSRING: 3,166\r\n
+					if (
+						(_Buffer[_Size - 15] == 13) && 	// \r
+						(_Buffer[_Size - 14] == 10) && 	// \n
+						(_Buffer[_Size - 13] == 83) && 	// S
+						(_Buffer[_Size - 12] == 82) && 	// R
+						(_Buffer[_Size - 11] == 73) && 	// I
+						(_Buffer[_Size - 10] == 78) && 	// N
+						(_Buffer[_Size - 9] == 71) && 	// G
+						(_Buffer[_Size - 8] == 58) && 	// :
+						(_Buffer[_Size - 7] == 32) && 	// " "
+						(_Buffer[_Size - 1] == 13) && 	// \r
+						(_Buffer[_Size - 0] == 10)		// \n
+					) _Response = _AT_SRING_;
+
+				}
+
+				// Control for "\r\n+CME ERROR: 6\r\n"
+				if (_Size > 16) {
+
+					// \r\n+CME ERROR: 6\r\n
+					// Control for <\r\n+CME> Response
+					if (
+						(_Buffer[_Size - 16] == 13) && 	// \r
+						(_Buffer[_Size - 15] == 10) && 	// \r
+						(_Buffer[_Size - 14] == 43) && 	// +
+						(_Buffer[_Size - 13] == 67) &&	// C 
+						(_Buffer[_Size - 12] == 77) && 	// M
+						(_Buffer[_Size - 11] == 69) && 	// E
+						(_Buffer[_Size - 10] == 32) && 	// " "
+						(_Buffer[_Size - 9] == 69) && 	// E
+						(_Buffer[_Size - 8] == 82) && 	// R
+						(_Buffer[_Size - 7] == 82) && 	// R
+						(_Buffer[_Size - 6] == 79) && 	// O
+						(_Buffer[_Size - 5] == 82) && 	// R
+						(_Buffer[_Size - 4] == 58) && 	// :
+						(_Buffer[_Size - 3] == 32) && 	// " "
+						(_Buffer[_Size - 1] == 13) && 	// \r
+						(_Buffer[_Size - 0] == 10)		// \r
+					) _Response = _AT_CME_;
+
+				} 
+
+				// Control for "\r\n+CME ERROR: 14\r\n"
+				if (_Size > 17) {
+
+					// \r\n+CME ERROR: 14\r\n
+					// Control for <\r\n+CME> Response
+					if (
+						(_Buffer[_Size - 17] == 13) && 	// \r
+						(_Buffer[_Size - 16] == 10) && 	// \r
+						(_Buffer[_Size - 15] == 43) && 	// +
+						(_Buffer[_Size - 14] == 67) &&	// C 
+						(_Buffer[_Size - 13] == 77) && 	// M
+						(_Buffer[_Size - 12] == 69) && 	// E
+						(_Buffer[_Size - 11] == 32) && 	// " "
+						(_Buffer[_Size - 10] == 69) && 	// E
+						(_Buffer[_Size - 9] == 82) && 	// R
+						(_Buffer[_Size - 8] == 82) && 	// R
+						(_Buffer[_Size - 7] == 79) && 	// O
+						(_Buffer[_Size - 6] == 82) && 	// R
+						(_Buffer[_Size - 5] == 58) && 	// :
+						(_Buffer[_Size - 4] == 32) && 	// " "
+						(_Buffer[_Size - 1] == 13) && 	// \r
+						(_Buffer[_Size - 0] == 10)		// \r
+					) _Response = _AT_CME_;
+
+				} 
+
+				// Control for "\r\n+CME ERROR: 614\r\n"
+				if (_Size > 18) {
 
 					// \r\n+CME ERROR: 614\r\n
 					// Control for <\r\n+CME> Response
@@ -138,25 +290,22 @@
 						(_Buffer[_Size - 15] == 67) &&	// C 
 						(_Buffer[_Size - 14] == 77) && 	// M
 						(_Buffer[_Size - 13] == 69) && 	// E
+						(_Buffer[_Size - 12] == 32) && 	// " "
+						(_Buffer[_Size - 11] == 69) && 	// E
+						(_Buffer[_Size - 10] == 82) && 	// R
+						(_Buffer[_Size - 9] == 82) && 	// R
+						(_Buffer[_Size - 8] == 79) && 	// O
+						(_Buffer[_Size - 7] == 82) && 	// R
+						(_Buffer[_Size - 6] == 58) && 	// :
+						(_Buffer[_Size - 5] == 32) && 	// " "
 						(_Buffer[_Size - 1] == 13) && 	// \r
 						(_Buffer[_Size - 0] == 10)		// \r
-					) return(true);
+					) _Response = _AT_CME_;
 
-				} else if (_Type == _AT_SD_PROMPT_ and _Size > 2) {
-
-					// \r\n> 
-					// Control for <\r\n> > Response
-					if (
-						(_Buffer[_Size - 3] == 13) && 
-						(_Buffer[_Size - 2] == 10) && 
-						(_Buffer[_Size - 1] == 62) && 
-						(_Buffer[_Size - 0] == 32)
-					) return(true);
-
-				} 
+				} 				
 
 				// End Function
-				return(false);
+				return(_Response);
 
 			}
 
@@ -2042,7 +2191,7 @@
 
 			// Socket Answer Function
 			// TODO: Düzenlenecek
-			bool SA(const uint8_t _ConnID, const uint8_t _ConnMode, uint16_t & _Length) {
+			bool SA(const uint8_t _ConnID, const uint8_t _ConnMode = 1, uint16_t & _Length) {
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -2072,33 +2221,16 @@
 				// Clear Buffer Variable
 				memset(_Buffer_Variable, '\0', _Buffer.Size);
 
-				// Read UART Response
-				while (!_Buffer.Response) {
+				// Control for Response
+				if (_Buffer.Response == _AT_SRING_) {
 
-					// Read Serial Char
-					_Buffer_Variable[_Buffer.Read_Order] = GSM_Serial->read();
+					// Declare Buffer Variable
+					uint16_t _Buffer;
 
-					// Handle for Message End
-					if (_Buffer.Read_Order > 10 && _Buffer_Variable[_Buffer.Read_Order - 1] == '\r' && _Buffer_Variable[_Buffer.Read_Order] == '\n') _Buffer.Response = true;
-
-					// Increase Read Order
-					if (_Buffer_Variable[_Buffer.Read_Order] > 31 && _Buffer_Variable[_Buffer.Read_Order] < 127) _Buffer.Read_Order += 1;
-					if (_Buffer_Variable[_Buffer.Read_Order] == '\r') _Buffer.Read_Order += 1;
-					if (_Buffer_Variable[_Buffer.Read_Order] == '\n') _Buffer.Read_Order += 1;
-
-					// Handle for timeout
-					if (millis() - Current_Time >= _Buffer.Time_Out) return(false);
+					// Handle Variables
+					if (sscanf(_Buffer_Variable, "\r\nOK\r\n\r\nSRING: %01u,%03u\r\n", &_Buffer, &_Length) == 2) return(true);
 
 				}
-
-				// Declare Buffer Variable
-				uint16_t _Buffer;
-
-				// Handle Variables
-				uint8_t _Parsed = sscanf(_Buffer_Variable, "\r\nOK\r\n\r\nSRING: %01u,%03u\r\n", &_Buffer, &_Length);
-
-				// Handle for Parse Count
-				if (_Parsed == 2) return(true);
 
 				// End Function
 				return(false);
@@ -2325,95 +2457,6 @@
 
 				// Handle for Response
 				return(_Buffer.Response == _AT_OK_);
-
-			}
-
-			// Detect SRING Response.
-			bool SRING(uint8_t &_ConnID,  uint16_t &_Length) {
-
-				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, 50000, 20};
-
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Read Current Time
-				const uint32_t Current_Time = millis();
-
-				// \r\nSRING: 3,108\r\n
-
-				// Read UART Response
-				while (!_Buffer.Response) {
-
-					// Read Serial Char
-					_Buffer_Variable[_Buffer.Read_Order] = GSM_Serial->read();
-
-					// Handle for Message End
-					if (_Buffer.Read_Order > 5 && _Buffer_Variable[_Buffer.Read_Order - 1] == '\r' && _Buffer_Variable[_Buffer.Read_Order] == '\n') _Buffer.Response = true;
-
-					// Increase Read Order
-					if (_Buffer_Variable[_Buffer.Read_Order] > 31 && _Buffer_Variable[_Buffer.Read_Order] < 127) _Buffer.Read_Order += 1;
-					if (_Buffer_Variable[_Buffer.Read_Order] == '\r') _Buffer.Read_Order += 1;
-					if (_Buffer_Variable[_Buffer.Read_Order] == '\n') _Buffer.Read_Order += 1;
-
-					// Handle for timeout
-					if (millis() - Current_Time >= _Buffer.Time_Out) return(false);
-
-				}
-
-				// Handle Variables
-				uint8_t _Parsed = sscanf(_Buffer_Variable, "\r\nSRING: %01u,%03u\r\n", &_ConnID, &_Length);
-
-				// Handle for Parse Count
-				if (_Parsed == 2) return(true);
-
-				// End Function
-				return(false);
-
-			}
-			bool SRING(void) {
-
-				// Declare Buffer Object
-				Serial_Buffer Buffer = {0, 0, 0, 50000, 20};
-
-				// Declare Buffer Variable
-				char Buffer_Variable[Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(Buffer_Variable, '\0', Buffer.Size);
-
-				// Read Current Time
-				const uint32_t Current_Time = millis();
-
-				// \r\nSRING: 3,108\r\n
-
-				// Read UART Response
-				while (!Buffer.Response) {
-
-					// Read Serial Char
-					Buffer_Variable[Buffer.Read_Order] = GSM_Serial->read();
-
-					// Handle for Message End
-					if (Buffer.Read_Order > 5 && Buffer_Variable[Buffer.Read_Order - 1] == '\r' && Buffer_Variable[Buffer.Read_Order] == '\n') Buffer.Response = true;
-
-					// Increase Read Order
-					if (Buffer_Variable[Buffer.Read_Order] > 31 && Buffer_Variable[Buffer.Read_Order] < 127) Buffer.Read_Order += 1;
-					if (Buffer_Variable[Buffer.Read_Order] == '\r') Buffer.Read_Order += 1;
-					if (Buffer_Variable[Buffer.Read_Order] == '\n') Buffer.Read_Order += 1;
-
-					// Handle for timeout
-					if (millis() - Current_Time >= Buffer.Time_Out) return(false);
-
-				}
-
-				// Control for SRING
-				if (strstr(Buffer_Variable, "\r\nSRING") != NULL) return(true);
-
-				// End Function
-				return(false);
 
 			}
 

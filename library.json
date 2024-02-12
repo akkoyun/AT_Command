@@ -1,8 +1,8 @@
 {
-	"name": "<Library_Name>",
+	"name": "AT_Command",
 	"version": "1.0.0",
-	"keywords": "<Library_Keywords>",
-	"description": "<Library_Description>",
+	"keywords": "AT, Command, AT_Command, Telit, LE910",
+	"description": "AT Command Library for Telit GSM Modules.",
 	"authors":
 	{
 		"name": "Mehmet Gunce Akkoyun",
@@ -11,7 +11,7 @@
 	},
 	"license": "MIT",
 	"frameworks": "arduino",
-	"headers": "<Library_Header_Name>.h",
+	"headers": "AT_Command.h",
 	"platforms":
 	[
 		"atmelavr",
@@ -20,17 +20,8 @@
 	"repository":
 	{
 		"type": "git",
-		"url": "https://github.com/akkoyun/<Repo_Name>.git"
-	},
-	"examples": [
-		{
-			"name": "<Sample_Name>",
-			"base": "examples/<Sample_Folder>",
-			"files": [
-				"<Sample_Name>.ino"
-			]
-		}
-	]
+		"url": "https://github.com/akkoyun/AT_Command.git"
+	}
 }
 
 

@@ -1,6 +1,7 @@
 #######################################
-# Syntax Coloring Map For <Library_Name>
+# Syntax Coloring Map For LE910C1_EUX
 #######################################
+LE910C1_EUX
 
 #######################################
 # Datatypes (KEYWORD1)
@@ -9,7 +10,60 @@
 #######################################
 # Methods and Functions (KEYWORD2)
 #######################################
-
+AT                      KEYWORD2
+FCLASS                  KEYWORD2
+CGMI                    KEYWORD2
+CGMM                    KEYWORD2
+SWPKGV                  KEYWORD2
+CGSN                    KEYWORD2
+CFUN                    KEYWORD2
+CMEE                    KEYWORD2
+CEER                    KEYWORD2
+ATE                     KEYWORD2
+K                       KEYWORD2
+CPIN                    KEYWORD2
+CCID                    KEYWORD2
+SIMDET                  KEYWORD2
+GPIO                    KEYWORD2
+SLED                    KEYWORD2
+SLEDSAV                 KEYWORD2
+E2SLRI                  KEYWORD2
+CREG                    KEYWORD2
+CGDCONT                 KEYWORD2
+SGACT                   KEYWORD2
+WS46                    KEYWORD2
+RFSTS                   KEYWORD2
+MONI                    KEYWORD2
+SCFG                    KEYWORD2
+SCFGEXT                 KEYWORD2
+SCFGEXT2                KEYWORD2
+SCFGEXT3                KEYWORD2
+FRWL                    KEYWORD2
+ICMP                    KEYWORD2
+Ping                    KEYWORD2
+CCLK                    KEYWORD2
+CTZU                    KEYWORD2
+NITZ                    KEYWORD2
+CCLKMODE                KEYWORD2
+ATSD                    KEYWORD2
+SH                      KEYWORD2
+SL                      KEYWORD2
+SA                      KEYWORD2
+SS                      KEYWORD2
+SO                      KEYWORD2
+SI                      KEYWORD2
+SSEND                   KEYWORD2
+SRECV                   KEYWORD2
+FTPCLOSE                KEYWORD2
+FTPCWD                  KEYWORD2
+FTPFSIZE                KEYWORD2
+FTPGETPKT               KEYWORD2
+FTPOPEN                 KEYWORD2
+FTPRECV                 KEYWORD2
+FTPTO                   KEYWORD2
+FTPTYPE                 KEYWORD2
+Z                       KEYWORD2
+SHDN                    KEYWORD2
 #######################################
 # Constants (LITERAL1)
 #######################################
