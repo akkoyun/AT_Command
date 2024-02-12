@@ -972,7 +972,7 @@
 			}
 
 			// SIMDET Function
-			bool SIMDET(const bool _Function_Type = GET, uint8_t _Mode = 2, bool & _SIM_in_Pin_State) {
+			bool SIMDET(const bool _Function_Type, uint8_t _Mode, bool & _SIM_in_Pin_State) {
 
 				// SET Function
 				if (_Function_Type == SET) {
@@ -1204,7 +1204,7 @@
 			}
 
 			// CREG Function
-			bool CREG(const bool _Function_Type = GET, uint8_t & _Mode, uint8_t & _Stat) {
+			bool CREG(const bool _Function_Type, uint8_t & _Mode, uint8_t & _Stat) {
 
 				// SET Function
 				if (_Function_Type == SET) {
@@ -1367,7 +1367,7 @@
 			}
 
 			// WS46 Function
-			bool WS46(const bool _Function_Type = GET, uint8_t & _Mode) {
+			bool WS46(const bool _Function_Type, uint8_t & _Mode) {
 
 				// GET Function
 				if (_Function_Type == GET) {
@@ -1656,7 +1656,7 @@
 			}
 
 			// Socket Configuration Function
-			bool SCFG(const uint8_t _Conn_ID, const uint8_t _Cid, const uint16_t _Pkt_Sz = 300, const uint16_t _Max_To = 90, const uint16_t _Conn_To = 600, const uint8_t _TX_To = 50) {
+			bool SCFG(const uint8_t _Conn_ID, const uint8_t _Cid, const uint16_t _Pkt_Sz, const uint16_t _Max_To, const uint16_t _Conn_To, const uint8_t _TX_To) {
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -1698,7 +1698,7 @@
 			}
 
 			// Extended Socket Configuration Function
-			bool SCFGEXT(const uint8_t _Conn_ID, const uint8_t _Sr_Mode = 0, const bool _Recv_Data_Mode = 0, const uint8_t _Keep_Alive = 0, const bool _Listen_Auto_Rsp = 0, const bool _Send_Data_Mode = 0) {
+			bool SCFGEXT(const uint8_t _Conn_ID, const uint8_t _Sr_Mode, const bool _Recv_Data_Mode, const uint8_t _Keep_Alive, const bool _Listen_Auto_Rsp, const bool _Send_Data_Mode) {
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -1740,7 +1740,7 @@
 			}
 
 			// Extended 2 Socket Configuration Function
-			bool SCFGEXT2(const uint8_t _Conn_ID, const bool _Buffer_Start = 0, const bool _Abort_Conn_Attempt = 0, const uint8_t _No_Carrier_Mode = 0) {
+			bool SCFGEXT2(const uint8_t _Conn_ID, const bool _Buffer_Start, const bool _Abort_Conn_Attempt, const uint8_t _No_Carrier_Mode) {
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -1782,7 +1782,7 @@
 			}
 
 			// Extended 3 Socket Configuration Function
-			bool SCFGEXT3(const uint8_t _Conn_ID, const bool _immRsp = 0, const bool _Closure_Type = 0, const bool _Fast_Sring = 0, const uint8_t _Linger_Time = 1, const uint8_t _UDP_Socket_Mode = 1, const bool _SSend_Timeout = 0) {
+			bool SCFGEXT3(const uint8_t _Conn_ID, const bool _immRsp, const bool _Closure_Type, const bool _Fast_Sring, const uint8_t _Linger_Time, const uint8_t _UDP_Socket_Mode, const bool _SSend_Timeout) {
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -1826,7 +1826,7 @@
 			}
 
 			// Firewall Add/Remove Function
-			bool FRWL(const bool _Function_Type = SET, const uint8_t _Action = 1, const char *_IP_Addr) {
+			bool FRWL(const bool _Function_Type, const uint8_t _Action, const char *_IP_Addr) {
 
 				// SET Function
 				if (_Function_Type == SET) {
@@ -2085,7 +2085,7 @@
 			}
 
 			// Socket Dial Function
-			bool ATSD(const uint8_t _Cid, const bool _Protocol = 0, const char *_IP, const uint8_t _Port = 80, const uint8_t _Closure_Type = 0, uint16_t _IPort = 90, const bool _Conn_Mode = 1) {
+			bool ATSD(const uint8_t _Cid, const bool _Protocol, const char *_IP, const uint8_t _Port, const uint8_t _Closure_Type, uint16_t _IPort, const bool _Conn_Mode) {
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -2200,7 +2200,7 @@
 
 			// Socket Answer Function
 			// TODO: Düzenlenecek
-			bool SA(const uint8_t _ConnID, const uint8_t _ConnMode = 1, uint16_t & _Length) {
+			bool SA(const uint8_t _ConnID, const uint8_t _ConnMode, uint16_t & _Length) {
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -2880,6 +2880,29 @@
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
+
+			}
+
+			// Find SRING
+			bool SRING(const uint16_t _TimeOut) {
+
+				// Declare Buffer Object
+				Serial_Buffer _Buffer = {0, 0, 0, _TimeOut, 20};
+
+				// Declare Buffer Variable
+				char _Buffer_Variable[_Buffer.Size];
+
+				// Clear Buffer Variable
+				memset(_Buffer_Variable, '\0', _Buffer.Size);
+
+				// Declare Response
+				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+
+				// Control for SRING
+				if (_Buffer.Response == _AT_SRING_) return(true);
+
+				// End Function
+				return(false);
 
 			}
 
