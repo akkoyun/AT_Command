@@ -77,4 +77,3 @@
 #define FOTA_Download_Size_Error			(uint8_t)21
 #define FOTA_Download_Not_Save				(uint8_t)21
 #define FOTA_SD_Error						(uint8_t)30
-

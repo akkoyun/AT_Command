@@ -2,7 +2,7 @@
 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/akkoyun/AT_Command) ![arduino-library-badge](https://www.ardu-badge.com/badge/AT_Command.svg?) ![Visits Badge](https://badges.pufler.dev/visits/akkoyun/AT_Command) ![GitHub stars](https://img.shields.io/github/stars/akkoyun/AT_Command?style=flat&logo=github)
 
-	Build - 01.00.00
+	Build - 01.00.05
 
 ---
 

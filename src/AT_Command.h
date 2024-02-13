@@ -74,7 +74,7 @@
 					_Buffer_Variable[_Buffer->Read_Order] = GSM_Serial->read();
 
 					// Control for Response
-					if (_Buffer->Read_Order > 3) {
+					if (_Buffer->Read_Order > 2) {
 
 						// Control for "\r\n> "
 						if (
@@ -88,7 +88,7 @@
 						if (_Buffer->Response == _AT_SD_PROMPT_) break;
 
 						// Control "\r\nOK\r\n"
-						if (_Buffer->Read_Order > 5) {
+						if (_Buffer->Read_Order > 4) {
 							if (
 								(_Buffer_Variable[_Buffer->Read_Order - 5] == '\r') && 	// \r
 								(_Buffer_Variable[_Buffer->Read_Order - 4] == '\n') && 	// \n
@@ -102,7 +102,7 @@
 							if (_Buffer->Response == _AT_OK_) break;
 
 							// Control for "\r\nERROR\r\n"
-							if (_Buffer->Read_Order > 8) {
+							if (_Buffer->Read_Order > 7) {
 								if (
 									(_Buffer_Variable[_Buffer->Read_Order - 8] == '\r') && 	// \r
 									(_Buffer_Variable[_Buffer->Read_Order - 7] == '\n') && 	// \n
@@ -119,7 +119,7 @@
 								if (_Buffer->Response == _AT_ERROR_) break;
 
 								// Control for "\r\nSRING: 3\r\n"
-								if (_Buffer->Read_Order > 11) {
+								if (_Buffer->Read_Order > 10) {
 									if (
 										(_Buffer_Variable[_Buffer->Read_Order - 11] == '\r') && 	// \r
 										(_Buffer_Variable[_Buffer->Read_Order - 10] == '\n') && 	// \n
@@ -138,7 +138,7 @@
 									if (_Buffer->Response == _AT_SRING_) break;
 
 									// Control for "\r\nSRING: 3,6\r\n"
-									if (_Buffer->Read_Order > 13) {
+									if (_Buffer->Read_Order > 12) {
 										if (
 											(_Buffer_Variable[_Buffer->Read_Order - 13] == '\r') && 	// \r
 											(_Buffer_Variable[_Buffer->Read_Order - 12] == '\n') && 	// \n
@@ -157,7 +157,7 @@
 										if (_Buffer->Response == _AT_SRING_) break;
 
 										// Control for "\r\nSRING: 3,16\r\n"
-										if (_Buffer->Read_Order > 14) {
+										if (_Buffer->Read_Order > 13) {
 											if (
 												(_Buffer_Variable[_Buffer->Read_Order - 14] == '\r') && 	// \r
 												(_Buffer_Variable[_Buffer->Read_Order - 13] == '\n') && 	// \n
@@ -176,7 +176,7 @@
 											if (_Buffer->Response == _AT_SRING_) break;
 
 											// Control for "\r\nSRING: 3,166\r\n"
-											if (_Buffer->Read_Order > 15) {
+											if (_Buffer->Read_Order > 14) {
 												if (
 													(_Buffer_Variable[_Buffer->Read_Order - 15] == '\r') && 	// \r
 													(_Buffer_Variable[_Buffer->Read_Order - 14] == '\n') && 	// \n
@@ -195,7 +195,7 @@
 												if (_Buffer->Response == _AT_SRING_) break;
 
 												// Control for "\r\n+CME ERROR: 6\r\n"
-												if (_Buffer->Read_Order > 16) {
+												if (_Buffer->Read_Order > 15) {
 													if (
 														(_Buffer_Variable[_Buffer->Read_Order - 16] == '\r') && 	// \r
 														(_Buffer_Variable[_Buffer->Read_Order - 15] == '\n') && 	// \r
@@ -219,7 +219,7 @@
 													if (_Buffer->Response == _AT_CME_) break;
 
 													// Control for "\r\n+CME ERROR: 14\r\n"
-													if (_Buffer->Read_Order > 17) {
+													if (_Buffer->Read_Order > 16) {
 														if (
 															(_Buffer_Variable[_Buffer->Read_Order - 17] == '\r') && 	// \r
 															(_Buffer_Variable[_Buffer->Read_Order - 16] == '\n') && 	// \n
@@ -243,7 +243,7 @@
 														if (_Buffer->Response == _AT_CME_) break;
 
 														// Control for "\r\n+CME ERROR: 614\r\n"
-														if (_Buffer->Read_Order > 18) {
+														if (_Buffer->Read_Order > 17) {
 															if (
 																(_Buffer_Variable[_Buffer->Read_Order - 18] == '\r') && 	// \r
 																(_Buffer_Variable[_Buffer->Read_Order - 17] == '\n') && 	// \n
@@ -294,8 +294,6 @@
 					if (millis() - _Current_Time >= _Buffer->Time_Out) break;
 
 				}
-
-Serial.print(_Buffer_Variable);
 
 				// Control for Response
 				if (_Buffer->Response != _AT_TIMEOUT_) return(true);
@@ -364,7 +362,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_AT_, 11};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_AT_, 11};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -399,7 +397,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_FCLASS_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FCLASS_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -430,7 +428,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_CGMI_, 35};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CGMI_, 35};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -492,7 +490,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_CGMM_, 35};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CGMM_, 35};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -576,7 +574,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SWPKGV_, 70};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SWPKGV_, 70};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -624,7 +622,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_CGSN_, 35};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CGSN_, 35};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -718,7 +716,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_CMEE_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CMEE_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -749,7 +747,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_CEER_, 21};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CEER_, 21};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -789,7 +787,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_ATE_, 13};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_ATE_, 13};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -824,7 +822,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_K_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_K_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -855,7 +853,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_CPIN_, 30};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CPIN_, 30};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -919,7 +917,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_CCID_, 37};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CCID_, 37};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -978,7 +976,7 @@ Serial.print(_Buffer_Variable);
 					GSM_Serial->write(0x0A);
 
 					// Declare Buffer Object
-					Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SIMDET_, 23};
+					Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SIMDET_, 23};
 
 					// Declare Buffer Variable
 					char _Buffer_Variable[_Buffer.Size];
@@ -1009,7 +1007,7 @@ Serial.print(_Buffer_Variable);
 					GSM_Serial->write(0x0A);
 
 					// Declare Buffer Object
-					Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SIMDET_, 23};
+					Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SIMDET_, 23};
 
 					// Declare Buffer Variable
 					char _Buffer_Variable[_Buffer.Size];
@@ -1087,7 +1085,7 @@ Serial.print(_Buffer_Variable);
 					GSM_Serial->write(0x0A);
 
 					// Declare Buffer Object
-					Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_GPIO_, 7};
+					Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_GPIO_, 7};
 
 					// Declare Buffer Variable
 					char _Buffer_Variable[_Buffer.Size];
@@ -1126,7 +1124,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SLED_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SLED_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -1157,7 +1155,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SLEDSAV_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SLEDSAV_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -1192,7 +1190,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_E2SLRI_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_E2SLRI_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -1227,7 +1225,7 @@ Serial.print(_Buffer_Variable);
 					GSM_Serial->write(0x0A);
 
 					// Declare Buffer Object
-					Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_CREG_, 25};
+					Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CREG_, 25};
 
 					// Declare Buffer Variable
 					char _Buffer_Variable[_Buffer.Size];
@@ -1258,7 +1256,7 @@ Serial.print(_Buffer_Variable);
 					GSM_Serial->write(0x0A);
 
 					// Declare Buffer Object
-					Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_CREG_, 25};
+					Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CREG_, 25};
 
 					// Declare Buffer Variable
 					char _Buffer_Variable[_Buffer.Size];
@@ -1308,7 +1306,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_CGDCONT_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CGDCONT_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -1342,7 +1340,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SGACT_, 35};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SGACT_, 35};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -1389,7 +1387,7 @@ Serial.print(_Buffer_Variable);
 					GSM_Serial->write(0x0A);
 
 					// Declare Buffer Object
-					Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_WS46_, 20};
+					Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_WS46_, 20};
 
 					// Declare Buffer Variable
 					char _Buffer_Variable[_Buffer.Size];
@@ -1429,7 +1427,7 @@ Serial.print(_Buffer_Variable);
 					GSM_Serial->write(0x0A);
 
 					// Declare Buffer Object
-					Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_WS46_, 20};
+					Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_WS46_, 20};
 
 					// Declare Buffer Variable
 					char _Buffer_Variable[_Buffer.Size];
@@ -1465,7 +1463,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_RFSTS_, 120};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_RFSTS_, 120};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -1576,7 +1574,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_MONI_, 130};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_MONI_, 130};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -1686,7 +1684,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SCFG_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SCFG_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -1728,7 +1726,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SCFGEXT_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SCFGEXT_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -1770,7 +1768,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SCFGEXT2_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SCFGEXT2_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -1814,7 +1812,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SCFGEXT3_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SCFGEXT3_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -1852,7 +1850,7 @@ Serial.print(_Buffer_Variable);
 					GSM_Serial->write(0x0A);
 
 					// Declare Buffer Object
-					Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_FRWL_, 15};
+					Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FRWL_, 15};
 
 					// Declare Buffer Variable
 					char _Buffer_Variable[_Buffer.Size];
@@ -1889,7 +1887,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_ICMP_, 15};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_ICMP_, 15};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -1922,7 +1920,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_Ping_, 150};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_Ping_, 150};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -1956,7 +1954,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_CCLK_, 40};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CCLK_, 40};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2007,7 +2005,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_CTZU_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CTZU_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2041,7 +2039,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_NITZ_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_NITZ_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2073,7 +2071,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_CCLKMODE_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CCLKMODE_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2117,7 +2115,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SD_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SD_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2149,7 +2147,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SH_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SH_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2187,7 +2185,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SL_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SL_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2224,7 +2222,7 @@ Serial.print(_Buffer_Variable);
 				// \r\nOK\r\n\r\nSRING: 2,86\r\n
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SA_, 30};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SA_, 30};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2264,7 +2262,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SS_, 60};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SS_, 60};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2311,7 +2309,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SO_, 20};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SO_, 20};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2343,7 +2341,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SI_, 50};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SI_, 50};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2395,7 +2393,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SSEND_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SSEND_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2461,7 +2459,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SRECV_, 1023};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SRECV_, 1023};
 
 				// Declare Response
 				this->Read_UART_Buffer(&_Buffer, _Data);
@@ -2486,7 +2484,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_FTPCLOSE_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPCLOSE_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2520,7 +2518,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_FTPCWD_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPCWD_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2554,7 +2552,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_FTPFSIZE_, 30};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPFSIZE_, 30};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2602,7 +2600,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_FTPGETPKT_, 20};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPGETPKT_, 20};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2641,7 +2639,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_FTPOPEN_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPOPEN_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2673,7 +2671,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_FTPRECV_, 255};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPRECV_, 255};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2774,7 +2772,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_FTPTO_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPTO_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2806,7 +2804,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_FTPTYPE_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPTYPE_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2838,7 +2836,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_Z_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_Z_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2869,7 +2867,7 @@ Serial.print(_Buffer_Variable);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TIMEOUT_SHDN_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SHDN_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2889,7 +2887,7 @@ Serial.print(_Buffer_Variable);
 			bool SRING(const uint16_t _TimeOut) {
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {0, 0, 0, _TimeOut, 20};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TimeOut, 20};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
