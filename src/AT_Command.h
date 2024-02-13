@@ -2230,6 +2230,9 @@
 				// Clear Buffer Variable
 				memset(_Buffer_Variable, '\0', _Buffer.Size);
 
+				// Declare Response
+				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+
 				// Control for Response
 				if (_Buffer.Response == _AT_SRING_) {
 
@@ -2378,7 +2381,7 @@
 			}
 
 			// Socket Pack Send Function
-			bool SSEND(const uint8_t _ConnID, const char * _Data_Pack) {
+			bool SSEND(const uint8_t _ConnID, const uint8_t _Method, const char * _Data_Pack) {
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -2410,6 +2413,36 @@
 					// Send Delay
 					delay(10);
 
+					// Print Header
+					if (_Method == HTTP_RESPONSE) {
+
+						// Print Header
+						GSM_Serial->print(F("HTTP/1.1 "));
+						GSM_Serial->print(F("200"));
+						GSM_Serial->print(F(" OK\r\nConnection: close\r\nContent-Type: application/json\r\n\r\n"));
+
+					} else if (_Method == HTTP_POST) {
+
+						// Print Header
+						GSM_Serial->print(F("POST "));
+						GSM_Serial->print(_PostMan_EndPoint_);
+						GSM_Serial->print(F(" HTTP/1.1\r\nHost: "));
+						GSM_Serial->print(_PostMan_Server_);
+						GSM_Serial->print(F("\r\nContent-Length: "));
+						GSM_Serial->print(strlen(_Data_Pack));
+						GSM_Serial->print(F("\r\nContent-Type: application/json\r\nUser-Agent: PostOffice\r\n\r\n"));
+
+					} else if (_Method == HTTP_GET) {
+
+						// Print Header
+						GSM_Serial->print(F("GET "));
+						GSM_Serial->print(_PostMan_Firmware_EndPoint_);
+						GSM_Serial->print(F(" HTTP/1.1\r\nHost: "));
+						GSM_Serial->print(_PostMan_Server_);
+						GSM_Serial->print(F("\r\nUser-Agent: PostOffice\r\n\r\n"));
+
+					}
+
 					// Send Data Pack
 					GSM_Serial->print(_Data_Pack);
 
@@ -2417,7 +2450,7 @@
 					GSM_Serial->print((char)26);
 
 					// Declare Buffer Object
-					Serial_Buffer _Buffer_Send = {0, 0, 0, _TIMEOUT_SSEND_, 7};
+					Serial_Buffer _Buffer_Send = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SSEND_, 7};
 
 					// Command Chain Delay (Advice by Telit)
 					delay(_AT_WAIT_DELAY_);
