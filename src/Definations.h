@@ -43,6 +43,16 @@
 #define _SIM_NOT_INSERTED_					(bool)false
 #define _SIM_INSERTED_						(bool)true
 
+// Socket Status Definitions
+// --------------------------
+#define _SOCKET_CLOSED_						(uint8_t)0
+#define _SOCKET_ACTIVE_						(uint8_t)1
+#define _SOCKET_SUSPENDED_					(uint8_t)2
+#define _SOCKET_PENDING_					(uint8_t)3
+#define _SOCKET_LISTENING_					(uint8_t)4
+#define _SOCKET_WAITING_					(uint8_t)5
+#define _SOCKET_PROCESS_					(uint8_t)6
+
 // AT Command Output Definitions
 // -----------------------------
 #define _AT_TIMEOUT_				    	(uint8_t)0
