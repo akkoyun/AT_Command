@@ -2381,7 +2381,7 @@
 			}
 
 			// Socket Pack Send Function
-			bool SSEND(const uint8_t _ConnID, const uint8_t _Method, const char * _Data_Pack) {
+			bool SSEND(const uint8_t _ConnID, const uint8_t _Method, const char * _Server, const char * _EndPoint, const char * _Data_Pack) {
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -2425,9 +2425,9 @@
 
 						// Print Header
 						GSM_Serial->print(F("POST "));
-						GSM_Serial->print(_PostMan_EndPoint_);
+						GSM_Serial->print(_EndPoint);
 						GSM_Serial->print(F(" HTTP/1.1\r\nHost: "));
-						GSM_Serial->print(_PostMan_Server_);
+						GSM_Serial->print(_Server);
 						GSM_Serial->print(F("\r\nContent-Length: "));
 						GSM_Serial->print(strlen(_Data_Pack));
 						GSM_Serial->print(F("\r\nContent-Type: application/json\r\nUser-Agent: PostOffice\r\n\r\n"));
@@ -2436,9 +2436,9 @@
 
 						// Print Header
 						GSM_Serial->print(F("GET "));
-						GSM_Serial->print(_PostMan_Firmware_EndPoint_);
+						GSM_Serial->print(_EndPoint);
 						GSM_Serial->print(F(" HTTP/1.1\r\nHost: "));
-						GSM_Serial->print(_PostMan_Server_);
+						GSM_Serial->print(_Server);
 						GSM_Serial->print(F("\r\nUser-Agent: PostOffice\r\n\r\n"));
 
 					}
