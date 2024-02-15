@@ -64,226 +64,24 @@
 				// Response Wait Delay
 				delay(5);
 
+				// Set Read Order
+				_Buffer->Read_Order = 0;
+				_Buffer->Response = _AT_TIMEOUT_;
+
 				// Read Current Time
 				const uint32_t _Current_Time = millis();
 
 				// Read UART Response
-				while (_Buffer->Response == _AT_TIMEOUT_) {
+				while (!_Buffer->Response) {
 
 					// Read Serial Char
 					_Buffer_Variable[_Buffer->Read_Order] = GSM_Serial->read();
 
 					// Control for Response
-					if (_Buffer->Read_Order > 2) {
-
-						// Control for "\r\n> "
-						if (
-							(_Buffer_Variable[_Buffer->Read_Order - 3] == '\r') && 	// \r
-							(_Buffer_Variable[_Buffer->Read_Order - 2] == '\n') && 	// \n
-							(_Buffer_Variable[_Buffer->Read_Order - 1] == '>') && 	// >
-							(_Buffer_Variable[_Buffer->Read_Order - 0] == ' ')		// " "
-						) _Buffer->Response = _AT_SD_PROMPT_;
-
-						// End Function
-						if (_Buffer->Response == _AT_SD_PROMPT_) break;
-
-						// Control "\r\nOK\r\n"
-						if (_Buffer->Read_Order > 4) {
-							if (
-								(_Buffer_Variable[_Buffer->Read_Order - 5] == '\r') && 	// \r
-								(_Buffer_Variable[_Buffer->Read_Order - 4] == '\n') && 	// \n
-								(_Buffer_Variable[_Buffer->Read_Order - 3] == 'O') && 	// O
-								(_Buffer_Variable[_Buffer->Read_Order - 2] == 'K') && 	// K
-								(_Buffer_Variable[_Buffer->Read_Order - 1] == '\r') && 	// \r
-								(_Buffer_Variable[_Buffer->Read_Order - 0] == '\n')  	// \n
-							) _Buffer->Response = _AT_OK_;
-
-							// End Function
-							if (_Buffer->Response == _AT_OK_) break;
-
-							// Control for "\r\nERROR\r\n"
-							if (_Buffer->Read_Order > 7) {
-								if (
-									(_Buffer_Variable[_Buffer->Read_Order - 8] == '\r') && 	// \r
-									(_Buffer_Variable[_Buffer->Read_Order - 7] == '\n') && 	// \n
-									(_Buffer_Variable[_Buffer->Read_Order - 6] == 'E') && 	// E
-									(_Buffer_Variable[_Buffer->Read_Order - 5] == 'R') && 	// R
-									(_Buffer_Variable[_Buffer->Read_Order - 4] == 'R') && 	// R
-									(_Buffer_Variable[_Buffer->Read_Order - 3] == 'O') && 	// O
-									(_Buffer_Variable[_Buffer->Read_Order - 2] == 'R') && 	// R
-									(_Buffer_Variable[_Buffer->Read_Order - 1] == '\r') && 	// \r
-									(_Buffer_Variable[_Buffer->Read_Order - 0] == '\n')		// \n
-								) _Buffer->Response = _AT_ERROR_;
-
-								// End Function
-								if (_Buffer->Response == _AT_ERROR_) break;
-
-								// Control for "\r\nSRING: 3\r\n"
-								if (_Buffer->Read_Order > 10) {
-									if (
-										(_Buffer_Variable[_Buffer->Read_Order - 11] == '\r') && 	// \r
-										(_Buffer_Variable[_Buffer->Read_Order - 10] == '\n') && 	// \n
-										(_Buffer_Variable[_Buffer->Read_Order - 9] == 'S') && 	// S
-										(_Buffer_Variable[_Buffer->Read_Order - 8] == 'R') && 	// R
-										(_Buffer_Variable[_Buffer->Read_Order - 7] == 'I') && 	// I
-										(_Buffer_Variable[_Buffer->Read_Order - 6] == 'N') && 	// N
-										(_Buffer_Variable[_Buffer->Read_Order - 5] == 'G') && 	// G
-										(_Buffer_Variable[_Buffer->Read_Order - 4] == ':') && 	// :
-										(_Buffer_Variable[_Buffer->Read_Order - 3] == ' ') && 	// " "
-										(_Buffer_Variable[_Buffer->Read_Order - 1] == '\r') && 	// \r
-										(_Buffer_Variable[_Buffer->Read_Order - 0] == '\n')		// \n
-									) _Buffer->Response = _AT_SRING_;
-
-									// End Function
-									if (_Buffer->Response == _AT_SRING_) break;
-
-									// Control for "\r\nSRING: 3,6\r\n"
-									if (_Buffer->Read_Order > 12) {
-										if (
-											(_Buffer_Variable[_Buffer->Read_Order - 13] == '\r') && 	// \r
-											(_Buffer_Variable[_Buffer->Read_Order - 12] == '\n') && 	// \n
-											(_Buffer_Variable[_Buffer->Read_Order - 11] == 'S') && 	// S
-											(_Buffer_Variable[_Buffer->Read_Order - 10] == 'R') && 	// R
-											(_Buffer_Variable[_Buffer->Read_Order - 9] == 'I') && 	// I
-											(_Buffer_Variable[_Buffer->Read_Order - 8] == 'N') && 	// N
-											(_Buffer_Variable[_Buffer->Read_Order - 7] == 'G') && 	// G
-											(_Buffer_Variable[_Buffer->Read_Order - 6] == ':') && 	// :
-											(_Buffer_Variable[_Buffer->Read_Order - 5] == ' ') && 	// " "
-											(_Buffer_Variable[_Buffer->Read_Order - 1] == '\r') && 	// \r
-											(_Buffer_Variable[_Buffer->Read_Order - 0] == '\n')		// \n
-										) _Buffer->Response = _AT_SRING_;
-
-										// End Function
-										if (_Buffer->Response == _AT_SRING_) break;
-
-										// Control for "\r\nSRING: 3,16\r\n"
-										if (_Buffer->Read_Order > 13) {
-											if (
-												(_Buffer_Variable[_Buffer->Read_Order - 14] == '\r') && 	// \r
-												(_Buffer_Variable[_Buffer->Read_Order - 13] == '\n') && 	// \n
-												(_Buffer_Variable[_Buffer->Read_Order - 12] == 'S') && 	// S
-												(_Buffer_Variable[_Buffer->Read_Order - 11] == 'R') && 	// R
-												(_Buffer_Variable[_Buffer->Read_Order - 10] == 'I') && 	// I
-												(_Buffer_Variable[_Buffer->Read_Order - 9] == 'N') && 	// N
-												(_Buffer_Variable[_Buffer->Read_Order - 8] == 'G') && 	// G
-												(_Buffer_Variable[_Buffer->Read_Order - 7] == ':') && 	// :
-												(_Buffer_Variable[_Buffer->Read_Order - 6] == ' ') && 	// " "
-												(_Buffer_Variable[_Buffer->Read_Order - 1] == '\r') && 	// \r
-												(_Buffer_Variable[_Buffer->Read_Order - 0] == '\n')		// \n
-											) _Buffer->Response = _AT_SRING_;
-
-											// End Function
-											if (_Buffer->Response == _AT_SRING_) break;
-
-											// Control for "\r\nSRING: 3,166\r\n"
-											if (_Buffer->Read_Order > 14) {
-												if (
-													(_Buffer_Variable[_Buffer->Read_Order - 15] == '\r') && 	// \r
-													(_Buffer_Variable[_Buffer->Read_Order - 14] == '\n') && 	// \n
-													(_Buffer_Variable[_Buffer->Read_Order - 13] == 'S') && 	// S
-													(_Buffer_Variable[_Buffer->Read_Order - 12] == 'R') && 	// R
-													(_Buffer_Variable[_Buffer->Read_Order - 11] == 'I') && 	// I
-													(_Buffer_Variable[_Buffer->Read_Order - 10] == 'N') && 	// N
-													(_Buffer_Variable[_Buffer->Read_Order - 9] == 'G') && 	// G
-													(_Buffer_Variable[_Buffer->Read_Order - 8] == ':') && 	// :
-													(_Buffer_Variable[_Buffer->Read_Order - 7] == ' ') && 	// " "
-													(_Buffer_Variable[_Buffer->Read_Order - 1] == '\r') && 	// \r
-													(_Buffer_Variable[_Buffer->Read_Order - 0] == '\n')		// \n
-												) _Buffer->Response = _AT_SRING_;
-
-												// End Function
-												if (_Buffer->Response == _AT_SRING_) break;
-
-												// Control for "\r\n+CME ERROR: 6\r\n"
-												if (_Buffer->Read_Order > 15) {
-													if (
-														(_Buffer_Variable[_Buffer->Read_Order - 16] == '\r') && 	// \r
-														(_Buffer_Variable[_Buffer->Read_Order - 15] == '\n') && 	// \r
-														(_Buffer_Variable[_Buffer->Read_Order - 14] == '+') && 	// +
-														(_Buffer_Variable[_Buffer->Read_Order - 13] == 'C') &&	// C 
-														(_Buffer_Variable[_Buffer->Read_Order - 12] == 'M') && 	// M
-														(_Buffer_Variable[_Buffer->Read_Order - 11] == 'E') && 	// E
-														(_Buffer_Variable[_Buffer->Read_Order - 10] == ' ') && 	// " "
-														(_Buffer_Variable[_Buffer->Read_Order - 9] == 'E') && 	// E
-														(_Buffer_Variable[_Buffer->Read_Order - 8] == 'R') && 	// R
-														(_Buffer_Variable[_Buffer->Read_Order - 7] == 'R') && 	// R
-														(_Buffer_Variable[_Buffer->Read_Order - 6] == 'O') && 	// O
-														(_Buffer_Variable[_Buffer->Read_Order - 5] == 'R') && 	// R
-														(_Buffer_Variable[_Buffer->Read_Order - 4] == ':') && 	// :
-														(_Buffer_Variable[_Buffer->Read_Order - 3] == ' ') && 	// " "
-														(_Buffer_Variable[_Buffer->Read_Order - 1] == '\r') && 	// \r
-														(_Buffer_Variable[_Buffer->Read_Order - 0] == '\n')		// \r
-													) _Buffer->Response = _AT_CME_;
-
-													// End Function
-													if (_Buffer->Response == _AT_CME_) break;
-
-													// Control for "\r\n+CME ERROR: 14\r\n"
-													if (_Buffer->Read_Order > 16) {
-														if (
-															(_Buffer_Variable[_Buffer->Read_Order - 17] == '\r') && 	// \r
-															(_Buffer_Variable[_Buffer->Read_Order - 16] == '\n') && 	// \n
-															(_Buffer_Variable[_Buffer->Read_Order - 15] == '+') && 	// +
-															(_Buffer_Variable[_Buffer->Read_Order - 14] == 'C') &&	// C 
-															(_Buffer_Variable[_Buffer->Read_Order - 13] == 'M') && 	// M
-															(_Buffer_Variable[_Buffer->Read_Order - 12] == 'E') && 	// E
-															(_Buffer_Variable[_Buffer->Read_Order - 11] == ' ') && 	// " "
-															(_Buffer_Variable[_Buffer->Read_Order - 10] == 'E') && 	// E
-															(_Buffer_Variable[_Buffer->Read_Order - 9] == 'R') && 	// R
-															(_Buffer_Variable[_Buffer->Read_Order - 8] == 'R') && 	// R
-															(_Buffer_Variable[_Buffer->Read_Order - 7] == 'O') && 	// O
-															(_Buffer_Variable[_Buffer->Read_Order - 6] == 'R') && 	// R
-															(_Buffer_Variable[_Buffer->Read_Order - 5] == ':') && 	// :
-															(_Buffer_Variable[_Buffer->Read_Order - 4] == ' ') && 	// " "
-															(_Buffer_Variable[_Buffer->Read_Order - 1] == '\r') && 	// \r
-															(_Buffer_Variable[_Buffer->Read_Order - 0] == '\n')		// \n
-														) _Buffer->Response = _AT_CME_;
-
-														// End Function
-														if (_Buffer->Response == _AT_CME_) break;
-
-														// Control for "\r\n+CME ERROR: 614\r\n"
-														if (_Buffer->Read_Order > 17) {
-															if (
-																(_Buffer_Variable[_Buffer->Read_Order - 18] == '\r') && 	// \r
-																(_Buffer_Variable[_Buffer->Read_Order - 17] == '\n') && 	// \n
-																(_Buffer_Variable[_Buffer->Read_Order - 16] == '+') && 	// +
-																(_Buffer_Variable[_Buffer->Read_Order - 15] == 'C') &&	// C 
-																(_Buffer_Variable[_Buffer->Read_Order - 14] == 'M') && 	// M
-																(_Buffer_Variable[_Buffer->Read_Order - 13] == 'E') && 	// E
-																(_Buffer_Variable[_Buffer->Read_Order - 12] == ' ') && 	// " "
-																(_Buffer_Variable[_Buffer->Read_Order - 11] == 'E') && 	// E
-																(_Buffer_Variable[_Buffer->Read_Order - 10] == 'R') && 	// R
-																(_Buffer_Variable[_Buffer->Read_Order - 9] == 'R') && 	// R
-																(_Buffer_Variable[_Buffer->Read_Order - 8] == 'O') && 	// O
-																(_Buffer_Variable[_Buffer->Read_Order - 7] == 'R') && 	// R
-																(_Buffer_Variable[_Buffer->Read_Order - 6] == ':') && 	// :
-																(_Buffer_Variable[_Buffer->Read_Order - 5] == ' ') && 	// " "
-																(_Buffer_Variable[_Buffer->Read_Order - 1] == '\r') && 	// \r
-																(_Buffer_Variable[_Buffer->Read_Order - 0] == '\n')		// \n
-															) _Buffer->Response = _AT_CME_;
-														} 				
-
-														// End Function
-														if (_Buffer->Response == _AT_CME_) break;
-
-													} 
-
-												} 
-
-											}
-
-										}
-
-									}
-
-								}
-
-							}
-
-						}
-
-					} 
+					if (this->Find(_AT_OK_, _Buffer_Variable, _Buffer->Read_Order)) _Buffer->Response = _AT_OK_;
+					if (this->Find(_AT_ERROR_, _Buffer_Variable, _Buffer->Read_Order)) _Buffer->Response = _AT_ERROR_;
+					if (this->Find(_AT_CME_, _Buffer_Variable, _Buffer->Read_Order)) _Buffer->Response = _AT_CME_;
+					if (this->Find(_AT_SD_PROMPT_, _Buffer_Variable, _Buffer->Read_Order)) _Buffer->Response = _AT_SD_PROMPT_;
 
 					// Increase Read Order
 					if (isAscii(_Buffer_Variable[_Buffer->Read_Order])) _Buffer->Read_Order++;
@@ -297,6 +95,72 @@
 
 				// Control for Response
 				if (_Buffer->Response != _AT_TIMEOUT_) return(true);
+
+				// End Function
+				return(false);
+
+			}
+
+			// OK Find Function
+			bool Find(const uint8_t _Type, char * _Buffer, uint16_t _Size) {
+
+				// Select Find Type
+				if (_Type == _AT_OK_ and _Size > 4) {
+
+					// \r\nOK\r\n
+					// Control for <\r\nOK\r\n> Response
+					if (
+						(_Buffer[_Size - 5] == 13) && 	// \r
+						(_Buffer[_Size - 4] == 10) && 	// \n
+						(_Buffer[_Size - 3] == 79) && 	// O
+						(_Buffer[_Size - 2] == 75) && 	// K
+						(_Buffer[_Size - 1] == 13) && 	// \r
+						(_Buffer[_Size - 0] == 10)		// \n
+					) return(true);
+
+				} else if (_Type == _AT_ERROR_ and _Size > 7) {
+
+					// \r\nERROR\r\n
+					// Control for <\r\nERROR\r\n> Response
+					if (
+						(_Buffer[_Size - 8] == 13) && 	// \r
+						(_Buffer[_Size - 7] == 10) && 	// \n
+						(_Buffer[_Size - 6] == 69) && 	// E
+						(_Buffer[_Size - 5] == 82) && 	// R
+						(_Buffer[_Size - 4] == 82) && 	// R
+						(_Buffer[_Size - 3] == 79) && 	// O
+						(_Buffer[_Size - 2] == 82) && 	// R
+						(_Buffer[_Size - 1] == 13) && 	// \r
+						(_Buffer[_Size - 0] == 10)		// \n
+					) return(true);
+
+				} else if (_Type == _AT_CME_ and _Size > 15) {
+
+					// \r\n+CME ERROR: 614\r\n
+					// Control for <\r\n+CME> Response
+					if (
+						(_Buffer[_Size - 18] == 13) && 	// \r
+						(_Buffer[_Size - 17] == 10) && 	// \r
+						(_Buffer[_Size - 16] == 43) && 	// +
+						(_Buffer[_Size - 15] == 67) &&	// C 
+						(_Buffer[_Size - 14] == 77) && 	// M
+						(_Buffer[_Size - 13] == 69) && 	// E
+						(_Buffer[_Size - 1] == 13) && 	// \r
+						(_Buffer[_Size - 0] == 10)		// \r
+					) return(true);
+
+				} else if (_Type == _AT_SD_PROMPT_ and _Size > 2) {
+
+					// \r\n> 
+					// Control for <\r\n> > Response
+					if (
+						(_Buffer[_Size - 3] == 13) && 
+						(_Buffer[_Size - 2] == 10) && 
+						(_Buffer[_Size - 1] == 62) && 
+						(_Buffer[_Size - 0] == 32)
+					) return(true);
+
+				} 
 
 				// End Function
 				return(false);
@@ -333,6 +197,168 @@
 					return 1;
 
 				}
+
+			}
+
+		// Protected Variables
+		protected:
+
+			// Detect SRING Response.
+			bool SRING(uint16_t &_Length) {
+
+				// Declare Buffer Object
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, 50000, 30};
+
+				// Declare Buffer Variable
+				char _Buffer_Variable[_Buffer.Size];
+
+				// Clear Buffer Variable
+				memset(_Buffer_Variable, '\0', _Buffer.Size);
+
+				// Read Current Time
+				const uint32_t Current_Time = millis();
+
+				// \r\nOK\r\n\r\nSRING: 3,164\r\n
+
+				// Read UART Response
+				while (_Buffer.Response == _AT_TIMEOUT_) {
+
+					// Read Delay
+					delay(1);
+
+					// Read Serial Char
+					_Buffer_Variable[_Buffer.Read_Order] = GSM_Serial->read();
+
+					// Control for SRING
+					if (_Buffer.Read_Order > 12) {
+
+						// Control for "\r\nOK\r\n\r\nSRING: 3,4\r\n"
+						if (
+							(_Buffer_Variable[_Buffer.Read_Order - 13] == '\r') && 	// \r
+							(_Buffer_Variable[_Buffer.Read_Order - 12] == '\n') && 	// \n
+							(_Buffer_Variable[_Buffer.Read_Order - 11] == 'S') && 	// \r
+							(_Buffer_Variable[_Buffer.Read_Order - 10] == 'R') && 	// \n
+							(_Buffer_Variable[_Buffer.Read_Order - 9] == 'I') && 	// E
+							(_Buffer_Variable[_Buffer.Read_Order - 8] == 'N') && 	// R
+							(_Buffer_Variable[_Buffer.Read_Order - 7] == 'G') && 	// R
+							(_Buffer_Variable[_Buffer.Read_Order - 6] == ':') && 	// O
+							(_Buffer_Variable[_Buffer.Read_Order - 5] == ' ') && 	// R
+							(_Buffer_Variable[_Buffer.Read_Order - 1] == '\r') && 	// \r
+							(_Buffer_Variable[_Buffer.Read_Order - 0] == '\n')		// \n
+						) _Buffer.Response = _AT_SRING_;
+
+						// Control for "\r\nOK\r\n\r\nSRING: 3,41\r\n"
+						if (
+							(_Buffer_Variable[_Buffer.Read_Order - 14] == '\r') && 	// \r
+							(_Buffer_Variable[_Buffer.Read_Order - 13] == '\n') && 	// \n
+							(_Buffer_Variable[_Buffer.Read_Order - 12] == 'S') && 	// \r
+							(_Buffer_Variable[_Buffer.Read_Order - 11] == 'R') && 	// \n
+							(_Buffer_Variable[_Buffer.Read_Order - 10] == 'I') && 	// E
+							(_Buffer_Variable[_Buffer.Read_Order - 9] == 'N') && 	// R
+							(_Buffer_Variable[_Buffer.Read_Order - 8] == 'G') && 	// R
+							(_Buffer_Variable[_Buffer.Read_Order - 7] == ':') && 	// O
+							(_Buffer_Variable[_Buffer.Read_Order - 6] == ' ') && 	// R
+							(_Buffer_Variable[_Buffer.Read_Order - 1] == '\r') && 	// \r
+							(_Buffer_Variable[_Buffer.Read_Order - 0] == '\n')		// \n
+						) _Buffer.Response = _AT_SRING_;
+
+						// Control for "\r\nOK\r\n\r\nSRING: 3,411\r\n"
+						if (
+							(_Buffer_Variable[_Buffer.Read_Order - 15] == '\r') && 	// \r
+							(_Buffer_Variable[_Buffer.Read_Order - 14] == '\n') && 	// \n
+							(_Buffer_Variable[_Buffer.Read_Order - 13] == 'S') && 	// \r
+							(_Buffer_Variable[_Buffer.Read_Order - 12] == 'R') && 	// \n
+							(_Buffer_Variable[_Buffer.Read_Order - 11] == 'I') && 	// E
+							(_Buffer_Variable[_Buffer.Read_Order - 10] == 'N') && 	// R
+							(_Buffer_Variable[_Buffer.Read_Order - 9] == 'G') && 	// R
+							(_Buffer_Variable[_Buffer.Read_Order - 8] == ':') && 	// O
+							(_Buffer_Variable[_Buffer.Read_Order - 7] == ' ') && 	// R
+							(_Buffer_Variable[_Buffer.Read_Order - 1] == '\r') && 	// \r
+							(_Buffer_Variable[_Buffer.Read_Order - 0] == '\n')		// \n
+						) _Buffer.Response = _AT_SRING_;
+
+					}
+
+					// Increase Read Order
+					if (isAscii(_Buffer_Variable[_Buffer.Read_Order])) _Buffer.Read_Order++;
+					if (_Buffer_Variable[_Buffer.Read_Order] == '\r') _Buffer.Read_Order++;
+					if (_Buffer_Variable[_Buffer.Read_Order] == '\n') _Buffer.Read_Order++;
+
+					// Handle for timeout
+					if (millis() - Current_Time >= _Buffer.Time_Out) return(false);
+
+				}
+
+				// Declare Buffer Variable
+				uint16_t _Read_Buffer;
+				uint8_t _Parsed = 0;
+
+				// Handle Variables
+				if (_Buffer.Read_Order > 20) {
+
+					// Parse Buffer
+					_Parsed = sscanf(_Buffer_Variable, "\r\nOK\r\n\r\nSRING: %01u,%03u\r\n", &_Read_Buffer, &_Length);
+
+				} else {
+
+					// Parse Buffer
+					_Parsed = sscanf(_Buffer_Variable, "\r\nSRING: %01u,%03u\r\n", &_Read_Buffer, &_Length);
+
+				}
+
+				// Handle for Parse Count
+				if (_Parsed == 2) return(true);
+
+				// End Function
+				return(false);
+
+			}
+			bool SRING(void) {
+
+				// Declare Buffer Object
+				Serial_Buffer Buffer = {
+					0, 		// Response State
+					0, 		// Read Order
+					0, 		// Data Order
+					50000, 	// Time Out
+					20		// Buffer Size
+				};
+
+				// Declare Buffer Variable
+				char Buffer_Variable[Buffer.Size];
+
+				// Clear Buffer Variable
+				memset(Buffer_Variable, '\0', Buffer.Size);
+
+				// Read Current Time
+				const uint32_t Current_Time = millis();
+
+				// \r\nSRING: 3,108\r\n
+
+				// Read UART Response
+				while (!Buffer.Response) {
+
+					// Read Serial Char
+					Buffer_Variable[Buffer.Read_Order] = GSM_Serial->read();
+
+					// Handle for Message End
+					if (Buffer.Read_Order > 5 && Buffer_Variable[Buffer.Read_Order - 1] == '\r' && Buffer_Variable[Buffer.Read_Order] == '\n') Buffer.Response = true;
+
+					// Increase Read Order
+					if (Buffer_Variable[Buffer.Read_Order] > 31 && Buffer_Variable[Buffer.Read_Order] < 127) Buffer.Read_Order += 1;
+					if (Buffer_Variable[Buffer.Read_Order] == '\r') Buffer.Read_Order += 1;
+					if (Buffer_Variable[Buffer.Read_Order] == '\n') Buffer.Read_Order += 1;
+
+					// Handle for timeout
+					if (millis() - Current_Time >= Buffer.Time_Out) return(false);
+
+				}
+
+				// Control for SRING
+				if (strstr(Buffer_Variable, "\r\nSRING") != NULL) return(true);
+
+				// End Function
+				return(false);
 
 			}
 
@@ -2230,19 +2256,8 @@
 				// Clear Buffer Variable
 				memset(_Buffer_Variable, '\0', _Buffer.Size);
 
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
-
-				// Control for Response
-				if (_Buffer.Response == _AT_SRING_) {
-
-					// Declare Buffer Variable
-					uint16_t _Buffer;
-
-					// Handle Variables
-					if (sscanf(_Buffer_Variable, "\r\nOK\r\n\r\nSRING: %01u,%03u\r\n", &_Buffer, &_Length) == 2) return(true);
-
-				}
+				// Handle for Response
+				if (this->SRING(_Length)) return(true);
 
 				// End Function
 				return(false);
@@ -2913,29 +2928,6 @@
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
-
-			}
-
-			// Find SRING
-			bool SRING(const uint16_t _TimeOut) {
-
-				// Declare Buffer Object
-				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TimeOut, 20};
-
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
-
-				// Control for SRING
-				if (_Buffer.Response == _AT_SRING_) return(true);
-
-				// End Function
-				return(false);
 
 			}
 
