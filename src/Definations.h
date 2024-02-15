@@ -62,6 +62,18 @@
 #define _AT_SD_PROMPT_                  	(uint8_t)4
 #define _AT_SRING_                  		(uint8_t)5
 
+// Define Connection Protocol
+// --------------------------
+#define TCP									(uint8_t)0
+#define UDP									(uint8_t)1
+
+// Define Connection Mode
+// ----------------------
+#define _CONNECTION_ONLINE_					(uint8_t)0
+#define _CONNECTION_COMMAND_				(uint8_t)1
+#define _CONNECTION_AUTO_CLOSE_				(uint8_t)0
+#define _CONNECTION_MANUAL_CLOSE_			(uint8_t)255
+
 // Define HTTP Method
 // ------------------
 #define HTTP_RESPONSE			    		(uint8_t)0
