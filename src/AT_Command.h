@@ -102,7 +102,7 @@
 			}
 
 			// OK Find Function
-			bool Find(const uint8_t _Type, char * _Buffer, uint16_t _Size) {
+			bool Find(const uint8_t _Type, const char * _Buffer, uint16_t _Size) {
 
 				// Select Find Type
 				if (_Type == _AT_OK_ and _Size > 4) {
@@ -168,7 +168,7 @@
 			}
 
 			// RSSI to Signal Quality Function
-			uint8_t RSSI_to_Signal_Quality(const uint8_t _RSSI) {
+			uint8_t RSSI_to_Signal_Quality(const int8_t _RSSI) {
 
 				// Handle for RSSI
 				if (_RSSI >= -65) {
@@ -297,12 +297,12 @@
 				if (_Buffer.Read_Order > 20) {
 
 					// Parse Buffer
-					_Parsed = sscanf(_Buffer_Variable, "\r\nOK\r\n\r\nSRING: %01u,%03u\r\n", &_Read_Buffer, &_Length);
+					_Parsed = sscanf(_Buffer_Variable, "\r\nOK\r\n\r\nSRING: %01hu,%03hu\r\n", &_Read_Buffer, &_Length);
 
 				} else {
 
 					// Parse Buffer
-					_Parsed = sscanf(_Buffer_Variable, "\r\nSRING: %01u,%03u\r\n", &_Read_Buffer, &_Length);
+					_Parsed = sscanf(_Buffer_Variable, "\r\nSRING: %01hu,%03hu\r\n", &_Read_Buffer, &_Length);
 
 				}
 
@@ -366,7 +366,7 @@
 		public:
 
 			// Constructor
-			LE910C1_EUX(Stream &_Serial) {
+			explicit LE910C1_EUX(Stream &_Serial) {
 
 				// Set Serial Port
 				GSM_Serial = & _Serial;
@@ -624,12 +624,12 @@
 					strncpy(_Firmware, &_Buffer_Variable[2], 9);
 
 					// End Function
-					return true;
+					return (true);
 
 				}
 
 				// End Function
-				return(false);
+				return (false);
 
 			}
 
@@ -682,12 +682,12 @@
 					}
 
 					// End Function
-					return true;
+					return (true);
 
 				}
 
 				// End Function
-				return(false);
+				return (false);
 
 			}
 
@@ -788,7 +788,7 @@
 				if (_Buffer.Response == _AT_OK_) {
 
 					// Handle Variables
-					if (sscanf(_Buffer_Variable, "\r\n#CEER: %03d\r\n\r\nOK\r\n", &_Code) == 1) return (true);
+					if (sscanf(_Buffer_Variable, "\r\n#CEER: %03hu\r\n\r\nOK\r\n", &_Code) == 1) return (true);
 
 				}
 
@@ -831,9 +831,6 @@
 
 			// Flow Control Function
 			bool K(const uint8_t _K = 0) {
-
-				// Control for Parameter
-				if (_K != 0 and _K != 3) return(false);
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -908,18 +905,13 @@
 					sscanf(_Buffer_Variable, "\r\n+CPIN: %09s\r\n\r\nOK\r\n", _PIN_Response);
 
 					// Control for SIM State
-					if (strstr(_PIN_Response, "READY")) {
-						_Code = _SIM_READY_;
-					} else if (strstr(_PIN_Response, "SIM PIN")) {
-						_Code = _SIM_PIN_;
-					} else if (strstr(_PIN_Response, "SIM PUK")) {
-						_Code = _SIM_PUK_;
-					} else {
-						_Code = _SIM_UNKNOWN_;
-					}
+					if (strstr(_PIN_Response, "READY")) _Code = _SIM_READY_;
+					else if (strstr(_PIN_Response, "SIM PIN")) _Code = _SIM_PIN_;
+					else if (strstr(_PIN_Response, "SIM PUK")) _Code = _SIM_PUK_;
+					else _Code = _SIM_UNKNOWN_;
 
 					// Handle Status
-					return (_Code != _SIM_UNKNOWN_);
+					return (_Code == _SIM_READY_);
 
 				}
 
@@ -1045,7 +1037,6 @@
 					this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
 
 					// Clear Variables
-					_Mode = 0;
 					_SIM_in_Pin_State = false;
 
 					// Handle for Response
@@ -1064,9 +1055,6 @@
 						// Assign SIM State
 						if (_Parsed_Variable == 2) {
 							
-							// Assign Mode
-							_Mode = _SIMDET_Mode;
-
 							// Assign State
 							if (_SIMDET_State == 0) _SIM_in_Pin_State = false;
 							if (_SIMDET_State == 1) _SIM_in_Pin_State = true;
@@ -1127,15 +1115,13 @@
 
 				}
 
+				// End Function
 				return(false);
 
 			}
 
 			// Set SLED Function
 			bool SLED(const uint8_t _SLED = 2) {
-
-				// Control for Parameter
-				if (_SLED != 0 and _SLED != 1 and _SLED != 2 and _SLED != 3 and _SLED != 4 and _SLED != 5) return(false);
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -1299,15 +1285,15 @@
 						// Handle Variables
 						sscanf(_Buffer_Variable, "\r\n+CREG: %hhu,%hhu\r\n\r\nOK\r\n", &_Mode, &_Stat);
 
-						// Handle Response
-						if (_Stat >= 0 && _Stat <= 11) return(true);
+						// End Function
+						return (true);
 
 					}
 
 				}
 
 				// End Function
-				return(false);
+				return (false);
 
 			}
 
@@ -1391,7 +1377,7 @@
 				}
 
 				// End Function
-				return(false);
+				return (false);
 
 			}
 
@@ -1427,11 +1413,22 @@
 					// Handle for Response
 					if (_Buffer.Response == _AT_OK_) {
 
+						// Declare Variables
+						uint8_t _Connection_Mode = _CONNECTION_UNKNOWN_;
+
+						// Reset Mode
+						_Mode = _CONNECTION_UNKNOWN_;
+
 						// Handle Variables
-						uint8_t _Variable_Count = sscanf(_Buffer_Variable, "\r\n+WS46: %02hhu\r\n\r\nOK\r\n", &_Mode);
+						sscanf(_Buffer_Variable, "\r\n+WS46: %02hhu\r\n\r\nOK\r\n", &_Connection_Mode);
+
+						// Control for Mode
+						if (_Connection_Mode == 12) _Mode = _CONNECTION_2G_;
+						if (_Connection_Mode == 22 || _Connection_Mode == 29) _Mode = _CONNECTION_3G_;
+						if (_Connection_Mode == 25 || _Connection_Mode == 28 || _Connection_Mode == 30 || _Connection_Mode == 31 ) _Mode = _CONNECTION_4G_;
 
 						// Handle Response
-						return (_Variable_Count == 1);
+						return (_Mode != _CONNECTION_UNKNOWN_);
 
 					}
 
@@ -1470,7 +1467,7 @@
 				}
 
 				// End Function
-				return(false);
+				return (false);
 
 			}
 
@@ -1540,28 +1537,26 @@
 					// \r\n#RFSTS: "286 01",1651,-99,-67,-12,2242,,128,3,1,0B5D120,"286016339612498","Turkcell",3,3,126\r\n\r\nOK\r\n
 					// \r\n#RFSTS: "286 01",1651,-99,-64,-14,2242,,128,3,1,0B5D120,"286016339612498","Turkcell",3,3,107\r\n\r\nOK\r\n
 
-
-
 					// Handle Variables
-					char * _Segment_1 = strtok(_Buffer_Variable, ",");	// \r\n#RFSTS: "286 01"
+					const char * _Segment_1 = strtok(_Buffer_Variable, ",");	// \r\n#RFSTS: "286 01"
 					strtok(NULL, ",");									// 1651
 					strtok(NULL, ",");									// -101
-					char * _Segment_4 = strtok(NULL, ",");				// -66
+					const char * _Segment_4 = strtok(NULL, ",");				// -66
 					strtok(NULL, ",");									// -15
-					char * _Segment_6 = strtok(NULL, ",");				// 2242
+					const char * _Segment_6 = strtok(NULL, ",");				// 2242
 					strtok(NULL, ",");									//	
 					strtok(NULL, ",");									// 128
 					strtok(NULL, ",");									// 3
 					strtok(NULL, ",");									// 1
-					char * _Segment_11 = strtok(NULL, ",");				// 0B5D120
+					const char * _Segment_11 = strtok(NULL, ",");				// 0B5D120
 
 					// Handle MCC, MNC
 					_MCC = 0; _MNC = 0;
-					sscanf(_Segment_1, "\r\n#RFSTS: \"%03u %02u\"", &_MCC, &_MNC);
+					sscanf(_Segment_1, "\r\n#RFSTS: \"%03hu %02hu\"", &_MCC, &_MNC);
 
 					// Handle RSSI
 					_RSSI = 0;
-					sscanf(_Segment_4, "-%03u", &_RSSI);
+					sscanf(_Segment_4, "-%03hu", &_RSSI);
 
 					// Calculate Signal Level
 					_Signal_Level = 0;
@@ -1569,11 +1564,11 @@
 
 					// Handle TAC
 					_TAC = 0;
-					sscanf(_Segment_6, "%05u", &_TAC);
+					sscanf(_Segment_6, "%05hu", &_TAC);
 
 					// Handle Cell ID
 					_Cell_ID = 0;
-					sscanf(_Segment_11, "%lX", &_Cell_ID);
+					sscanf(_Segment_11, "%u", &_Cell_ID);
 
 					// End Function
 					return(true);
@@ -1644,29 +1639,29 @@
 						strtok(NULL, " ");							// Turkcell
 						strtok(NULL, " ");							// RSRP:-97
 						strtok(NULL, " ");							// RSRQ:-11
-						char * _Segment_5 = strtok(NULL, " ");		// TAC:2242
-						char * _Segment_6 = strtok(NULL, " ");		// Id:0B5D125
+						const char * _Segment_5 = strtok(NULL, " ");		// TAC:2242
+						const char * _Segment_6 = strtok(NULL, " ");		// Id:0B5D125
 						strtok(NULL, " ");							// EARFCN:100
-						char * _Segment_8 = strtok(NULL, " ");		// PWR:-66dbm
+						const char * _Segment_8 = strtok(NULL, " ");		// PWR:-66dbm
 						strtok(NULL, " ");							// DRX:128
-						char * _Segment_10 = strtok(NULL, " ");		// pci:335
+						const char * _Segment_10 = strtok(NULL, " ");		// pci:335
 						strtok(NULL, " ");							// QRxLevMin:0\r\n\r\nOK\r\n
 
 						// Handle TAC
 						_TAC = 0;
-						sscanf(_Segment_5, "TAC:%05u", &_TAC);
+						sscanf(_Segment_5, "TAC:%05hu", &_TAC);
 
 						// Handle Cell ID
 						_Cell_ID = 0;
-						sscanf(_Segment_6, "Id:%lx", &_Cell_ID);
+						sscanf(_Segment_6, "Id:%u", &_Cell_ID);
 
 						// Handle RSSI
 						_RSSI = 0;
-						sscanf(_Segment_8, "PWR:-%03udbm", &_RSSI);
+						sscanf(_Segment_8, "PWR:-%03hudbm", &_RSSI);
 
 						// Handle PCell ID
 						_PCell_ID = 0;
-						sscanf(_Segment_10, "pci:%lx", &_PCell_ID);
+						sscanf(_Segment_10, "pci:%u", &_PCell_ID);
 
 						// Calculate Signal Level
 						_Signal_Level = 0;
@@ -1869,9 +1864,13 @@
 					// Send UART Command
 					GSM_Serial->print(F("AT#FRWL="));
 					GSM_Serial->print(_Action);
-					if (_Action != 2) GSM_Serial->print(F(",\""));
-					if (_Action != 2) GSM_Serial->print(_IP_Addr);
-					if (_Action != 2) GSM_Serial->print(F("\",\"255.255.255.255\""));
+
+					// Print IP Segment
+					if (_Action != 2) {
+						GSM_Serial->print(F(",\""));
+						GSM_Serial->print(_IP_Addr);
+						GSM_Serial->print(F("\",\"255.255.255.255\""));
+					}
 					GSM_Serial->write(0x0D);
 					GSM_Serial->write(0x0A);
 
@@ -2379,11 +2378,11 @@
 					strtok(_Buffer_Variable, ",");				// \r\n#SI: 2
 					strtok(NULL, ",");							// 51
 					strtok(NULL, ",");							// 0
-					char * _Buffer_Size = strtok(NULL, ",");	// 13900
+					const char * _Buffer_Size = strtok(NULL, ",");	// 13900
 
 					// Handle Buffer Size
 					_Data_Buffer = 0;
-					sscanf(_Buffer_Size, "%05u", &_Data_Buffer);
+					sscanf(_Buffer_Size, "%05hu", &_Data_Buffer);
 
 					// End Function
 					return(true);
@@ -2617,7 +2616,7 @@
 					// \r\n#FTPFSIZE: 174945\r\n\r\nOK\r\n
 
 					// Handle Variables
-					sscanf(_Buffer_Variable, "\r\n#FTPFSIZE:%lu\r\n\r\nOK\r\n", &_Length);
+					sscanf(_Buffer_Variable, "\r\n#FTPFSIZE:%u\r\n\r\nOK\r\n", &_Length);
 
 					// End Function
 					return (true);
@@ -2739,44 +2738,23 @@
 					// Clear Size Variable
 					_ReadSize = 0;
 
-					// Control for Response
-					if (_Buffer.Response) {
+					// Parse Size
+					sscanf(_Buffer_Variable, "\r\n#FTPRECV: %03hu\r\n", &_ReadSize);
 
-						// Parse Size
-						sscanf(_Buffer_Variable, "\r\n#FTPRECV: %03u\r\n", &_ReadSize);
+					// Calculate Header Length
+					// TODO: düzenlenecek
+					const int _Start = 14;
 
-						// Calculate Header Length
-						const int _Start = 14 + (int)log10(_ReadSize) + 1;
+					// Parse Data
+					for (uint16_t i = _Start; i < (_Start + _ReadSize); i++) {
 
-						// Parse Data
-						for (uint16_t i = _Start; i < (_Start + _ReadSize); i++) {
+						// Get Data
+						_Data[_Buffer.Data_Order] = _Buffer_Variable[i];
 
-							// Get Data
-							_Data[_Buffer.Data_Order] = _Buffer_Variable[i];
-
-							// Increase Data Order
-							_Buffer.Data_Order += 1;
-
-						}
-
-					} else {
-
-						// \r\n+CME ERROR: 614\r\n
-
-						// Declare CMEE Variable
-						int _CME = 0;
-
-						// Control for CME Error
-						sscanf(_Buffer_Variable, "\r\n+CME ERROR: %03d\r\n", &_CME);
-
-						// Handle CME Error
-						if (_CME == 606) _State = 1;
-						if (_CME == 614) _State = 2;
+						// Increase Data Order
+						_Buffer.Data_Order += 1;
 
 					}
-
-					// Control for Timeout
-					if (!_Buffer.Response) return(false);
 
 					// End Function
 					if (_ReadSize == _Buffer.Data_Order and _ReadSize != 0) {

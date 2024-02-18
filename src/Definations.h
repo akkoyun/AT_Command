@@ -74,6 +74,14 @@
 #define _CONNECTION_AUTO_CLOSE_				(uint8_t)0
 #define _CONNECTION_MANUAL_CLOSE_			(uint8_t)255
 
+// Define Connection Status
+// ------------------------
+#define _CONNECTION_UNKNOWN_				(uint8_t)0
+#define _CONNECTION_2G_						(uint8_t)1
+#define _CONNECTION_3G_						(uint8_t)2
+#define _CONNECTION_4G_						(uint8_t)3
+#define _CONNECTION_TDSCDMA_				(uint8_t)4
+
 // Define HTTP Method
 // ------------------
 #define HTTP_RESPONSE			    		(uint8_t)0
