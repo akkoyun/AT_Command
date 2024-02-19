@@ -39,7 +39,7 @@
 				uint16_t 			Read_Order;
 				uint16_t 			Data_Order;
 				const uint16_t 		Time_Out;
-				uint16_t 			Size;
+				const uint16_t 			Size;
 			};
 
 			// Clear Serial Buffer Function
@@ -167,6 +167,59 @@
 
 			}
 
+			// ASCII Find Function
+			uint16_t Find_Char(const char * _Buffer, const char _Char, const uint8_t _Count) {
+
+				// Declare Counter
+				uint16_t _Counter = 0;
+
+				// Find Char in Buffer
+				for (uint16_t i = 0; _Buffer[i] != '\0'; ++i) {
+
+					// Control for Char
+					if (_Buffer[i] == _Char) {
+
+						// Increase Counter
+						_Counter++;
+
+						// Control for Counter
+						if (_Counter == _Count) return(i);
+
+					}
+
+				}
+
+				// End Function
+				return(0);
+
+			}
+
+			// Get Parsed Number Function
+			uint32_t Parse_Number(const char * _Buffer, const char _Start_Char, const uint8_t _Start_Times, const char _End_Char, const uint8_t _End_Times) {
+
+				// Handle Start Position
+				uint16_t _Start = this->Find_Char(_Buffer, _Start_Char, _Start_Times);
+
+				// Handle End Position
+				uint16_t _End = this->Find_Char(_Buffer, _End_Char, _End_Times);
+
+				// Handle Size
+				uint16_t _Size = _End - _Start - 1;
+
+				// Declare Buffer
+				char _Temp_Buffer[_Size];
+
+				// Clear Buffer
+				memset(_Temp_Buffer, '\0', _Size);
+
+				// Copy Buffer
+				memcpy(_Temp_Buffer, &_Buffer[_Start + 1], _Size);
+
+				// Return Parsed Number
+				return(atoi(_Temp_Buffer));
+
+			}
+
 			// RSSI to Signal Quality Function
 			uint8_t RSSI_to_Signal_Quality(const int8_t _RSSI) {
 
@@ -289,25 +342,89 @@
 
 				}
 
-				// Declare Buffer Variable
-				uint16_t _Read_Buffer;
-				uint8_t _Parsed = 0;
+				// \r\nOK\r\n\r\nSRING: 1,999\r\n
+				if (_Buffer.Read_Order == 21) {
 
-				// Handle Variables
-				if (_Buffer.Read_Order > 20) {
+					// Get Number from Buffer
+					uint8_t _Digit_1 = _Buffer_Variable[17] - 48;
+					uint8_t _Digit_2 = _Buffer_Variable[18] - 48;
+					uint8_t _Digit_3 = _Buffer_Variable[19] - 48;
 
-					// Parse Buffer
-					_Parsed = sscanf(_Buffer_Variable, "\r\nOK\r\n\r\nSRING: %01hu,%03hu\r\n", &_Read_Buffer, &_Length);
+					// Set Read Buffer
+					_Length = (_Digit_1 * 100) + (_Digit_2 * 10) + _Digit_3;
 
-				} else {
-
-					// Parse Buffer
-					_Parsed = sscanf(_Buffer_Variable, "\r\nSRING: %01hu,%03hu\r\n", &_Read_Buffer, &_Length);
+					// End Function
+					return (true);
 
 				}
 
-				// Handle for Parse Count
-				if (_Parsed == 2) return(true);
+				// \r\nOK\r\n\r\nSRING: 1,99\r\n
+				else if (_Buffer.Read_Order == 20) {
+
+					// Get Number from Buffer
+					uint8_t _Digit_1 = _Buffer_Variable[17] - 48;
+					uint8_t _Digit_2 = _Buffer_Variable[18] - 48;
+
+					// Set Read Buffer
+					_Length = (_Digit_1 * 10) + _Digit_2;
+
+					// End Function
+					return (true);
+
+				}
+
+				// \r\nOK\r\n\r\nSRING: 1,9\r\n
+				else if (_Buffer.Read_Order == 19) {
+
+					// Get Number from Buffer
+					_Length = _Buffer_Variable[17] - 48;
+
+					// End Function
+					return (true);
+
+				}
+
+				// \r\nSRING: 1,999\r\n
+				else if (_Buffer.Read_Order == 18) {
+
+					// Get Number from Buffer
+					uint8_t _Digit_1 = _Buffer_Variable[11] - 48;
+					uint8_t _Digit_2 = _Buffer_Variable[12] - 48;
+					uint8_t _Digit_3 = _Buffer_Variable[13] - 48;
+
+					// Set Read Buffer
+					_Length = (_Digit_1 * 100) + (_Digit_2 * 10) + _Digit_3;
+
+					// End Function
+					return (true);
+
+				}
+
+				// \r\nSRING: 1,99\r\n
+				else if (_Buffer.Read_Order == 17) {
+
+					// Get Number from Buffer
+					uint8_t _Digit_1 = _Buffer_Variable[11] - 48;
+					uint8_t _Digit_2 = _Buffer_Variable[12] - 48;
+
+					// Set Read Buffer
+					_Length = (_Digit_1 * 10) + _Digit_2;
+
+					// End Function
+					return (true);
+
+				}
+
+				// \r\nSRING: 1,9\r\n
+				else if (_Buffer.Read_Order == 16) {
+
+					// Get Number from Buffer
+					_Length = _Buffer_Variable[11] - 48;
+
+					// End Function
+					return (true);
+
+				}
 
 				// End Function
 				return(false);
@@ -787,8 +904,47 @@
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
 
-					// Handle Variables
-					if (sscanf(_Buffer_Variable, "\r\n#CEER: %03hu\r\n\r\nOK\r\n", &_Code) == 1) return (true);
+					// \r\n#CEER: 999\r\n\r\nOK\r\n
+					if (_Buffer.Read_Order == 19) {
+
+						// Get Number from Buffer
+						uint8_t _Digit_1 = _Buffer_Variable[9] - 48;
+						uint8_t _Digit_2 = _Buffer_Variable[10] - 48;
+						uint8_t _Digit_3 = _Buffer_Variable[11] - 48;
+
+						// Set Read Buffer
+						_Code = (_Digit_1 * 100) + (_Digit_2 * 10) + _Digit_3;
+
+						// End Function
+						return (true);
+
+					}
+
+					// \r\n#CEER: 99\r\n\r\nOK\r\n
+					else if (_Buffer.Read_Order == 18) {
+
+						// Get Number from Buffer
+						uint8_t _Digit_1 = _Buffer_Variable[9] - 48;
+						uint8_t _Digit_2 = _Buffer_Variable[10] - 48;
+
+						// Set Read Buffer
+						_Code = (_Digit_1 * 10) + _Digit_2;
+
+						// End Function
+						return (true);
+
+					}
+
+					// \r\n#CEER: 9\r\n\r\nOK\r\n
+					else if (_Buffer.Read_Order == 17) {
+
+						// Get Number from Buffer
+						_Code = _Buffer_Variable[9] - 48;
+
+						// End Function
+						return (true);
+
+					}
 
 				}
 
@@ -948,6 +1104,11 @@
 
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
+
+					// 8990011936290169339
+					// 89 : Industry Identifier
+					// 9001 : Country Code
+					// 1936290169339 : SIM Serial Number
 
 					// Clear ICCID Variable
 					memset(_ICCID, '\0', 21);
@@ -1472,7 +1633,7 @@
 			}
 
 			// RFSTS Function
-			bool RFSTS(uint16_t & _MCC, uint16_t & _MNC, uint16_t & _RSSI, uint8_t & _Signal_Level, uint32_t & _Cell_ID, uint16_t & _TAC) {
+			bool RFSTS(uint16_t & _MCC, uint16_t & _MNC, uint16_t & _RSSI, uint8_t & _Signal_Level) {
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -1537,38 +1698,18 @@
 					// \r\n#RFSTS: "286 01",1651,-99,-67,-12,2242,,128,3,1,0B5D120,"286016339612498","Turkcell",3,3,126\r\n\r\nOK\r\n
 					// \r\n#RFSTS: "286 01",1651,-99,-64,-14,2242,,128,3,1,0B5D120,"286016339612498","Turkcell",3,3,107\r\n\r\nOK\r\n
 
-					// Handle Variables
-					const char * _Segment_1 = strtok(_Buffer_Variable, ",");	// \r\n#RFSTS: "286 01"
-					strtok(NULL, ",");									// 1651
-					strtok(NULL, ",");									// -101
-					const char * _Segment_4 = strtok(NULL, ",");				// -66
-					strtok(NULL, ",");									// -15
-					const char * _Segment_6 = strtok(NULL, ",");				// 2242
-					strtok(NULL, ",");									//	
-					strtok(NULL, ",");									// 128
-					strtok(NULL, ",");									// 3
-					strtok(NULL, ",");									// 1
-					const char * _Segment_11 = strtok(NULL, ",");				// 0B5D120
+					// Read MCC
+					_MCC = (uint16_t)this->Parse_Number(_Buffer_Variable, '\"', 1, ' ', 2);
 
-					// Handle MCC, MNC
-					_MCC = 0; _MNC = 0;
-					sscanf(_Segment_1, "\r\n#RFSTS: \"%03hu %02hu\"", &_MCC, &_MNC);
+					// Read MNC
+					_MNC = (uint16_t)this->Parse_Number(_Buffer_Variable, ' ', 2, '\"', 2);
 
-					// Handle RSSI
-					_RSSI = 0;
-					sscanf(_Segment_4, "-%03hu", &_RSSI);
+					// Read RSSI
+					_RSSI = (uint16_t)this->Parse_Number(_Buffer_Variable, '-', 2, ',', 4);
 
 					// Calculate Signal Level
 					_Signal_Level = 0;
 					_Signal_Level = this->RSSI_to_Signal_Quality(_RSSI * -1);
-
-					// Handle TAC
-					_TAC = 0;
-					sscanf(_Segment_6, "%05hu", &_TAC);
-
-					// Handle Cell ID
-					_Cell_ID = 0;
-					sscanf(_Segment_11, "%u", &_Cell_ID);
 
 					// End Function
 					return(true);
@@ -1580,8 +1721,8 @@
 
 			}
 
-			// MONI Function
-			bool MONI(uint16_t & _TAC, uint32_t & _Cell_ID, uint16_t & _RSSI, uint8_t & _Signal_Level, uint32_t & _PCell_ID) {
+			// Signal Quality Function
+			bool CSQ(uint16_t & _RSSI) {
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -1590,12 +1731,12 @@
 				delay(_AT_WAIT_DELAY_);
 
 				// Send UART Command
-				GSM_Serial->print(F("AT#MONI"));
+				GSM_Serial->print(F("AT+CSQ"));
 				GSM_Serial->write(0x0D);
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_MONI_, 130};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CSQ_, 7};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -1609,68 +1750,25 @@
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
 
-					// Control for GSM or LTE
-					if (strstr(_Buffer_Variable, "bsic") != NULL) {
+					// \r\n+CSQ: 9,9\r\n\r\nOK\r\n
+					// \r\n+CSQ: 9,99\r\n\r\nOK\r\n
+					// \r\n+CSQ: 99,9\r\n\r\nOK\r\n
+					// \r\n+CSQ: 99,99\r\n\r\nOK\r\n
+					// \r\n+CSQ: 999,9\r\n\r\nOK\r\n
+					// \r\n+CSQ: 999,99\r\n\r\nOK\r\n
 
-						// GSM network
-						// #MONI: <netname> BSIC:<bsic> RxQual:<qual> LAC:<lac> Id:<id> ARFCN:<arfcn> PWR:<dBm> dBm TA: <timadv>
+					// Read MCC
+					uint8_t _CSQ = this->Parse_Number(_Buffer_Variable, ' ', 1, ',', 1);
 
-					} else {
+					// Calculate RSSI
+					if (_CSQ == 0) _RSSI = 113;
+					else if (_CSQ == 1) _RSSI = 111;
+					else if (_CSQ <= 30) _RSSI = 109 - (_CSQ * 2);
+					else if (_CSQ == 31) _RSSI = 51;
+					else if (_CSQ == 99) _RSSI = 0;
 
-						// LTE network
-						// #MONI: <netmame> RSRP:<rsrp> RSRQ:<rsrq> TAC:<tac> Id:<id> EARFCN:<earfcn> PWR:<dBm> DRX:<drx> pci:<physicalCellId> QRxLevMin:<QRxLevMin>
-
-						// <netname>			- network name
-						// <id>					- cell identifier
-						// <dBm>				- received signal strength in dBm
-						// <drx>				- Discontinuous reception cycle length
-						// <physicalCellId>		- physical cell identifier
-						// <rsrp>				- Reference Signal Received Power
-						// <rsrq>				- Reference Signal Received Quality
-						// <tac>				- Tracking Area Code
-						// <earfcn>				- E-UTRA Absolute Radio Frequency Channel Number
-						// <QRxLevMin>			- Minimum required received signal level
-
-						// AT#MONI\r\n
-						// \r\n#MONI: Turkcell RSRP:-97 RSRQ:-11 TAC:2242 Id:0B5D125 EARFCN:100 PWR:-66dbm DRX:128 pci:335 QRxLevMin:0\r\n\r\nOK\r\n
-
-						// Handle Variables
-						strtok(_Buffer_Variable, " ");				// \r\n#MONI:
-						strtok(NULL, " ");							// Turkcell
-						strtok(NULL, " ");							// RSRP:-97
-						strtok(NULL, " ");							// RSRQ:-11
-						const char * _Segment_5 = strtok(NULL, " ");		// TAC:2242
-						const char * _Segment_6 = strtok(NULL, " ");		// Id:0B5D125
-						strtok(NULL, " ");							// EARFCN:100
-						const char * _Segment_8 = strtok(NULL, " ");		// PWR:-66dbm
-						strtok(NULL, " ");							// DRX:128
-						const char * _Segment_10 = strtok(NULL, " ");		// pci:335
-						strtok(NULL, " ");							// QRxLevMin:0\r\n\r\nOK\r\n
-
-						// Handle TAC
-						_TAC = 0;
-						sscanf(_Segment_5, "TAC:%05hu", &_TAC);
-
-						// Handle Cell ID
-						_Cell_ID = 0;
-						sscanf(_Segment_6, "Id:%u", &_Cell_ID);
-
-						// Handle RSSI
-						_RSSI = 0;
-						sscanf(_Segment_8, "PWR:-%03hudbm", &_RSSI);
-
-						// Handle PCell ID
-						_PCell_ID = 0;
-						sscanf(_Segment_10, "pci:%u", &_PCell_ID);
-
-						// Calculate Signal Level
-						_Signal_Level = 0;
-						_Signal_Level = this->RSSI_to_Signal_Quality(_RSSI * -1);
-
-						// End Function
-						return(true);
-
-					}
+					// End Function
+					return(true);
 
 				}
 
@@ -1999,18 +2097,24 @@
 					*/
 
 					// Handle Variables
-					uint8_t _Variable_Count = sscanf(_Buffer_Variable, "\r\n+CCLK: \"%02hhu/%02hhu/%02hhu,%02hhu:%02hhu:%02hhu+%02hhu\"\r\n\r\nOK\r\n", &_Year, &_Month, &_Day, &_Hour, &_Minute, &_Second, &_Time_Zone);
+					_Year = this->Parse_Number(_Buffer_Variable, '\"', 1, '/', 1);
+					_Month = this->Parse_Number(_Buffer_Variable, '/', 1, '/', 2);
+					_Day = this->Parse_Number(_Buffer_Variable, '/', 2, ',', 1);
+					_Hour = this->Parse_Number(_Buffer_Variable, ',', 1, ':', 2);
+					_Minute = this->Parse_Number(_Buffer_Variable, ':', 2, ':', 3);
+					_Second = this->Parse_Number(_Buffer_Variable, ':', 3, '+', 2);
+					_Time_Zone = this->Parse_Number(_Buffer_Variable, '+', 2, '\"', 2);
 
 					// Control for Variables
 					if (_Year > 99 || _Year < 22 || _Month > 12 || _Day > 31 || _Hour > 24 || _Minute > 59 || _Second > 59) return false;
 
 					// Control for Variable
-					if (_Variable_Count == 7) return true;
+					return (true);
 
 				}
 
 				// End Function
-				return(false);
+				return (false);
 
 			}
 
@@ -2227,7 +2331,6 @@
 			}
 
 			// Socket Answer Function
-			// TODO: Düzenlenecek
 			bool SA(const uint8_t _ConnID, const uint8_t _ConnMode, uint16_t & _Length) {
 
 				// Clear UART Buffer
@@ -2374,15 +2477,8 @@
 
 					// \r\n#SI: 2,51,0,13900,0\r\n\r\nOK\r\n
 
-					// Handle Variables
-					strtok(_Buffer_Variable, ",");				// \r\n#SI: 2
-					strtok(NULL, ",");							// 51
-					strtok(NULL, ",");							// 0
-					const char * _Buffer_Size = strtok(NULL, ",");	// 13900
-
-					// Handle Buffer Size
-					_Data_Buffer = 0;
-					sscanf(_Buffer_Size, "%05hu", &_Data_Buffer);
+					// Read Data Buffer
+					_Data_Buffer = (uint16_t)this->Parse_Number(_Buffer_Variable, ',', 3, ',', 4);
 
 					// End Function
 					return(true);
@@ -2615,8 +2711,8 @@
 
 					// \r\n#FTPFSIZE: 174945\r\n\r\nOK\r\n
 
-					// Handle Variables
-					sscanf(_Buffer_Variable, "\r\n#FTPFSIZE:%u\r\n\r\nOK\r\n", &_Length);
+					// Parse Length
+					_Length = this->Parse_Number(_Buffer_Variable, ':', 1, '\r', 2);
 
 					// End Function
 					return (true);
@@ -2733,52 +2829,17 @@
 				if (_Buffer.Response == _AT_OK_) {
 					
 					// \r\n#FTPRECV: 200\r\n20202055\r\n:100BA00020202020000D0A002C002C002C00415495\r\n:100BB00023534C3D000D0A004154234532534C52FF\r\n:100BC000493D000D0A00415423534C4544534156BE\r\n:100BD000000D0A00415423534C45443D000D0A00CA\r\n:100BE0004\r\n\r\nOK\r\n
-					// \r\n+CME ERROR: 614\r\n	
-
-					// Clear Size Variable
-					_ReadSize = 0;
 
 					// Parse Size
-					sscanf(_Buffer_Variable, "\r\n#FTPRECV: %03hu\r\n", &_ReadSize);
-
-					// Calculate Header Length
-					// TODO: düzenlenecek
-					const int _Start = 14;
-
-					// Parse Data
-					for (uint16_t i = _Start; i < (_Start + _ReadSize); i++) {
-
-						// Get Data
-						_Data[_Buffer.Data_Order] = _Buffer_Variable[i];
-
-						// Increase Data Order
-						_Buffer.Data_Order += 1;
-
-					}
+					_ReadSize = (uint16_t)this->Parse_Number(_Buffer_Variable, ' ', 1, '\r', 2);
 
 					// End Function
-					if (_ReadSize == _Buffer.Data_Order and _ReadSize != 0) {
-
-						// Return Function
-						return (true);
-
-					} else {
-
-						// Wait Delay
-						delay(1000);
-
-						// Return Function
-						return (false);
-
-					}
-
-					// End Function
-					return(false);
+					return (true);
 
 				}
 
 				// End Function
-				return(false);
+				return (false);
 
 			}
 

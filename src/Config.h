@@ -63,3 +63,4 @@
 #define _TIMEOUT_FTPTYPE_					(uint16_t)65000
 #define _TIMEOUT_Z_							(uint16_t)5000
 #define _TIMEOUT_SHDN_						(uint16_t)5000
+#define _TIMEOUT_CSQ_						(uint16_t)1000
