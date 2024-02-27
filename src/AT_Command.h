@@ -137,16 +137,18 @@
 				} else if (_Type == _AT_CME_ and _Size > 15) {
 
 					// \r\n+CME ERROR: 614\r\n
+					// \r\n+CME ERROR: 551\r\n
 					// Control for <\r\n+CME> Response
 					if (
 						(_Buffer[_Size - 18] == 13) && 	// \r
-						(_Buffer[_Size - 17] == 10) && 	// \r
+						(_Buffer[_Size - 17] == 10) && 	// \n
 						(_Buffer[_Size - 16] == 43) && 	// +
 						(_Buffer[_Size - 15] == 67) &&	// C 
 						(_Buffer[_Size - 14] == 77) && 	// M
 						(_Buffer[_Size - 13] == 69) && 	// E
+						(_Buffer[_Size - 12] == 32) && 	//
 						(_Buffer[_Size - 1] == 13) && 	// \r
-						(_Buffer[_Size - 0] == 10)		// \r
+						(_Buffer[_Size - 0] == 10)		// \n
 					) return(true);
 
 				} else if (_Type == _AT_SD_PROMPT_ and _Size > 2) {
@@ -437,7 +439,7 @@
 					0, 		// Response State
 					0, 		// Read Order
 					0, 		// Data Order
-					50000, 	// Time Out
+					1000, 	// Time Out
 					20		// Buffer Size
 				};
 

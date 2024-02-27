@@ -92,18 +92,26 @@
 
 // Define HTTP Headers
 // -------------------
+#define HTTP_Unknown			    		(uint16_t)0
 #define HTTP_OK					    		(uint16_t)200
+#define HTTP_Created			    		(uint16_t)201
 #define HTTP_Accepted			    		(uint16_t)202
 #define HTTP_NoContent			    		(uint16_t)204
 #define HTTP_BadRequest			    		(uint16_t)400
+#define HTTP_Unauthorized		    		(uint16_t)401
+#define HTTP_Forbidden			    		(uint16_t)403
 #define HTTP_NotFound			    		(uint16_t)404
 #define HTTP_MethodNotAllowed	    		(uint16_t)405
 #define HTTP_NotAcceptable		    		(uint16_t)406
+#define HTTP_RequestTimeout		    		(uint16_t)408
 
 // Define FOTA Status
 // ------------------
 #define FOTA_Download_OK					(uint8_t)1
 #define FOTA_Download_TimeOut				(uint8_t)20
 #define FOTA_Download_Size_Error			(uint8_t)21
-#define FOTA_Download_Not_Save				(uint8_t)21
+#define FOTA_Download_Not_Save				(uint8_t)22
 #define FOTA_SD_Error						(uint8_t)30
+#define FOTA_Download_MD5_Error				(uint8_t)99
+#define FOTA_Server_Error					(uint8_t)23
+#define FOTA_Download_CME_Error				(uint8_t)24
