@@ -137,18 +137,16 @@
 				} else if (_Type == _AT_CME_ and _Size > 15) {
 
 					// \r\n+CME ERROR: 614\r\n
-					// \r\n+CME ERROR: 551\r\n
 					// Control for <\r\n+CME> Response
 					if (
 						(_Buffer[_Size - 18] == 13) && 	// \r
-						(_Buffer[_Size - 17] == 10) && 	// \n
+						(_Buffer[_Size - 17] == 10) && 	// \r
 						(_Buffer[_Size - 16] == 43) && 	// +
 						(_Buffer[_Size - 15] == 67) &&	// C 
 						(_Buffer[_Size - 14] == 77) && 	// M
 						(_Buffer[_Size - 13] == 69) && 	// E
-						(_Buffer[_Size - 12] == 32) && 	//
 						(_Buffer[_Size - 1] == 13) && 	// \r
-						(_Buffer[_Size - 0] == 10)		// \n
+						(_Buffer[_Size - 0] == 10)		// \r
 					) return(true);
 
 				} else if (_Type == _AT_SD_PROMPT_ and _Size > 2) {
@@ -439,7 +437,7 @@
 					0, 		// Response State
 					0, 		// Read Order
 					0, 		// Data Order
-					1000, 	// Time Out
+					50000, 	// Time Out
 					20		// Buffer Size
 				};
 
@@ -1142,7 +1140,7 @@
 			bool SIMDET(const bool _Function_Type, uint8_t _Mode, bool & _SIM_in_Pin_State) {
 
 				// SET Function
-				if (_Function_Type == SET) {
+				if (_Function_Type == _AT_SET_) {
 
 					// Clear UART Buffer
 					this->Clear_UART_Buffer();
@@ -1174,7 +1172,7 @@
 				}
 
 				// GET Function
-				if (_Function_Type == GET) {
+				if (_Function_Type == _AT_GET_) {
 
 					// Clear UART Buffer
 					this->Clear_UART_Buffer();
@@ -1240,10 +1238,10 @@
 			}
 
 			// Set GPIO Function
-			bool GPIO(const bool _Function_Type = SET, const uint8_t _Pin = 1, const uint8_t _Mode = 0, const uint8_t _Direction = 2) {
+			bool GPIO(const bool _Function_Type = _AT_SET_, const uint8_t _Pin = 1, const uint8_t _Mode = 0, const uint8_t _Direction = 2) {
 
 				// SET Function
-				if (_Function_Type == SET) {
+				if (_Function_Type == _AT_SET_) {
 
 					// Clear UART Buffer
 					this->Clear_UART_Buffer();
@@ -1385,7 +1383,7 @@
 			bool CREG(const bool _Function_Type, uint8_t & _Mode, uint8_t & _Stat) {
 
 				// SET Function
-				if (_Function_Type == SET) {
+				if (_Function_Type == _AT_SET_) {
 
 					// Clear UART Buffer
 					this->Clear_UART_Buffer();
@@ -1417,7 +1415,7 @@
 				}
 
 				// GET Function
-				if (_Function_Type == GET) {
+				if (_Function_Type == _AT_GET_) {
 
 					// Clear UART Buffer
 					this->Clear_UART_Buffer();
@@ -1548,7 +1546,7 @@
 			bool WS46(const bool _Function_Type, uint8_t & _Mode) {
 
 				// GET Function
-				if (_Function_Type == GET) {
+				if (_Function_Type == _AT_GET_) {
 
 					// Clear UART Buffer
 					this->Clear_UART_Buffer();
@@ -1598,7 +1596,7 @@
 				}
 
 				// SET Function
-				if (_Function_Type == SET) {
+				if (_Function_Type == _AT_SET_) {
 
 					// Clear UART Buffer
 					this->Clear_UART_Buffer();
@@ -1953,7 +1951,7 @@
 			bool FRWL(const bool _Function_Type, const uint8_t _Action, const char *_IP_Addr) {
 
 				// SET Function
-				if (_Function_Type == SET) {
+				if (_Function_Type == _AT_SET_) {
 
 					// Clear UART Buffer
 					this->Clear_UART_Buffer();
@@ -2526,14 +2524,14 @@
 					delay(10);
 
 					// Print Header
-					if (_Method == HTTP_RESPONSE) {
+					if (_Method == _HTTP_RESPONSE_) {
 
 						// Print Header
 						GSM_Serial->print(F("HTTP/1.1 "));
 						GSM_Serial->print(F("200"));
 						GSM_Serial->print(F(" OK\r\nConnection: close\r\nContent-Type: application/json\r\n\r\n"));
 
-					} else if (_Method == HTTP_POST) {
+					} else if (_Method == _HTTP_POST_) {
 
 						// Print Header
 						GSM_Serial->print(F("POST "));
@@ -2544,7 +2542,7 @@
 						GSM_Serial->print(strlen(_Data_Pack));
 						GSM_Serial->print(F("\r\nContent-Type: application/json\r\nUser-Agent: PostOffice\r\n\r\n"));
 
-					} else if (_Method == HTTP_GET) {
+					} else if (_Method == _HTTP_GET_) {
 
 						// Print Header
 						GSM_Serial->print(F("GET "));
@@ -2557,6 +2555,160 @@
 
 					// Send Data Pack
 					GSM_Serial->print(_Data_Pack);
+
+					// Print End Char
+					GSM_Serial->print((char)26);
+
+					// Declare Buffer Object
+					Serial_Buffer _Buffer_Send = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SSEND_, 7};
+
+					// Command Chain Delay (Advice by Telit)
+					delay(_AT_WAIT_DELAY_);
+
+					// Declare Buffer Variable
+					char _Buffer_Send_Variable[_Buffer_Send.Size];
+
+					// Clear Buffer Variable
+					memset(_Buffer_Send_Variable, '\0', _Buffer_Send.Size);
+
+					// Declare Response
+					this->Read_UART_Buffer(&_Buffer_Send, _Buffer_Send_Variable);
+
+					// End Function
+					return(_Buffer_Send.Response == _AT_OK_);
+
+				}
+
+				// End Function
+				return (false);
+
+			}
+			bool SSEND(const uint8_t _ConnID, const uint8_t _Method, const char * _Data_Pack) {
+
+				// Clear UART Buffer
+				this->Clear_UART_Buffer();
+
+				// Command Chain Delay (Advice by Telit)
+				delay(_AT_WAIT_DELAY_);
+
+				// Send UART Command
+				GSM_Serial->print(F("AT#SSEND="));
+				GSM_Serial->print(_ConnID);
+				GSM_Serial->write(0x0D);
+				GSM_Serial->write(0x0A);
+
+				// Declare Buffer Object
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SSEND_, 7};
+
+				// Declare Buffer Variable
+				char _Buffer_Variable[_Buffer.Size];
+
+				// Clear Buffer Variable
+				memset(_Buffer_Variable, '\0', _Buffer.Size);
+
+				// Declare Response
+				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+
+				// Handle for Response
+				if (_Buffer.Response == _AT_SD_PROMPT_) {
+
+					// Send Delay
+					delay(10);
+
+					// Print Header
+					if (_Method == _HTTP_RESPONSE_) {
+
+						// Print Header
+						GSM_Serial->print(F("HTTP/1.1 "));
+						GSM_Serial->print(F("200"));
+						GSM_Serial->print(F(" OK\r\nConnection: close\r\nContent-Type: application/json\r\n\r\n"));
+
+					} else if (_Method == _HTTP_POST_) {
+
+						// Print Header
+						GSM_Serial->print(F("POST "));
+						GSM_Serial->print(_PostMan_EndPoint_);
+						GSM_Serial->print(F(" HTTP/1.1\r\nHost: "));
+						GSM_Serial->print(_PostMan_Server_);
+						GSM_Serial->print(F("\r\nContent-Length: "));
+						GSM_Serial->print(strlen(_Data_Pack));
+						GSM_Serial->print(F("\r\nContent-Type: application/json\r\nUser-Agent: PostOffice\r\n\r\n"));
+
+					} else if (_Method == _HTTP_GET_) {
+
+						// Print Header
+						GSM_Serial->print(F("GET "));
+						GSM_Serial->print(_PostMan_EndPoint_);
+						GSM_Serial->print(F(" HTTP/1.1\r\nHost: "));
+						GSM_Serial->print(_PostMan_Server_);
+						GSM_Serial->print(F("\r\nUser-Agent: PostOffice\r\n\r\n"));
+
+					}
+
+					// Send Data Pack
+					GSM_Serial->print(_Data_Pack);
+
+					// Print End Char
+					GSM_Serial->print((char)26);
+
+					// Declare Buffer Object
+					Serial_Buffer _Buffer_Send = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SSEND_, 7};
+
+					// Command Chain Delay (Advice by Telit)
+					delay(_AT_WAIT_DELAY_);
+
+					// Declare Buffer Variable
+					char _Buffer_Send_Variable[_Buffer_Send.Size];
+
+					// Clear Buffer Variable
+					memset(_Buffer_Send_Variable, '\0', _Buffer_Send.Size);
+
+					// Declare Response
+					this->Read_UART_Buffer(&_Buffer_Send, _Buffer_Send_Variable);
+
+					// End Function
+					return(_Buffer_Send.Response == _AT_OK_);
+
+				}
+
+				// End Function
+				return (false);
+
+			}
+			bool SSEND(void (*_Parser)()) {
+
+				// Clear UART Buffer
+				this->Clear_UART_Buffer();
+
+				// Command Chain Delay (Advice by Telit)
+				delay(_AT_WAIT_DELAY_);
+
+				// Send UART Command
+				GSM_Serial->print(F("AT#SSEND="));
+				GSM_Serial->print(_PostMan_Outgoing_Socket_);
+				GSM_Serial->write(0x0D);
+				GSM_Serial->write(0x0A);
+
+				// Declare Buffer Object
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SSEND_, 7};
+
+				// Declare Buffer Variable
+				char _Buffer_Variable[_Buffer.Size];
+
+				// Clear Buffer Variable
+				memset(_Buffer_Variable, '\0', _Buffer.Size);
+
+				// Declare Response
+				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+
+				// Handle for Response
+				if (_Buffer.Response == _AT_SD_PROMPT_) {
+
+					// Send Delay
+					delay(10);
+
+					// Send Data Pack
+					_Parser();
 
 					// Print End Char
 					GSM_Serial->print((char)26);
@@ -2609,7 +2761,7 @@
 				// Declare Response
 				this->Read_UART_Buffer(&_Buffer, _Data);
 
-				// Handle for Response
+				// End Function
 				return(_Buffer.Response == _AT_OK_);
 
 			}

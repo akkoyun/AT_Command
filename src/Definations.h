@@ -5,8 +5,8 @@
 
 // Function Mode Definitions
 // -------------------------
-#define SET						    		(bool)true
-#define GET						    		(bool)false
+#define _AT_SET_				    		(bool)true
+#define _AT_GET_				    		(bool)false
 
 // Manufacturer Definitions
 // -----------------------
@@ -64,8 +64,8 @@
 
 // Define Connection Protocol
 // --------------------------
-#define TCP									(uint8_t)0
-#define UDP									(uint8_t)1
+#define _AT_TCP_							(uint8_t)0
+#define _AT_UDP_							(uint8_t)1
 
 // Define Connection Mode
 // ----------------------
@@ -84,26 +84,26 @@
 
 // Define HTTP Method
 // ------------------
-#define HTTP_RESPONSE			    		(uint8_t)0
-#define HTTP_GET				    		(uint8_t)1
-#define HTTP_POST				    		(uint8_t)2
-#define HTTP_PUT				    		(uint8_t)3
-#define HTTP_DELETE				    		(uint8_t)4
+#define _HTTP_RESPONSE_			    		(uint8_t)0
+#define _HTTP_GET_				    		(uint8_t)1
+#define _HTTP_POST_				    		(uint8_t)2
+#define _HTTP_PUT_				    		(uint8_t)3
+#define _HTTP_DELETE_			    		(uint8_t)4
 
 // Define HTTP Headers
 // -------------------
-#define HTTP_Unknown			    		(uint16_t)0
-#define HTTP_OK					    		(uint16_t)200
-#define HTTP_Created			    		(uint16_t)201
-#define HTTP_Accepted			    		(uint16_t)202
-#define HTTP_NoContent			    		(uint16_t)204
-#define HTTP_BadRequest			    		(uint16_t)400
-#define HTTP_Unauthorized		    		(uint16_t)401
-#define HTTP_Forbidden			    		(uint16_t)403
-#define HTTP_NotFound			    		(uint16_t)404
-#define HTTP_MethodNotAllowed	    		(uint16_t)405
-#define HTTP_NotAcceptable		    		(uint16_t)406
-#define HTTP_RequestTimeout		    		(uint16_t)408
+#define _HTTP_Unknown_			    		(uint16_t)0
+#define _HTTP_OK_				    		(uint16_t)200
+#define _HTTP_Created_			    		(uint16_t)201
+#define _HTTP_Accepted_			    		(uint16_t)202
+#define _HTTP_NoContent_		    		(uint16_t)204
+#define _HTTP_BadRequest_		    		(uint16_t)400
+#define _HTTP_Unauthorized_		    		(uint16_t)401
+#define _HTTP_Forbidden_		    		(uint16_t)403
+#define _HTTP_NotFound_			    		(uint16_t)404
+#define _HTTP_MethodNotAllowed_	    		(uint16_t)405
+#define _HTTP_NotAcceptable_	    		(uint16_t)406
+#define _HTTP_RequestTimeout_	    		(uint16_t)408
 
 // Define FOTA Status
 // ------------------
