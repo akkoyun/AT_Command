@@ -143,6 +143,9 @@
 #ifndef _TIMEOUT_SH_
 	#define _TIMEOUT_SH_				   	(uint16_t)5000
 #endif
+#ifndef _TIMEOUT_TCPMAXWIN_
+	#define _TIMEOUT_TCPMAXWIN_			   	(uint16_t)1000
+#endif
 #ifndef _TIMEOUT_SL_
 	#define _TIMEOUT_SL_				   	(uint16_t)1000
 #endif

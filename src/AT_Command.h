@@ -2187,6 +2187,40 @@
 
 			}
 
+			// Set Maximum TCP Window Size
+			bool TCPMAXWIN(const uint16_t _WinSize = 0, const uint8_t _ScaleFactor = 0) {
+
+				// Clear UART Buffer
+				this->Clear_UART_Buffer();
+
+				// Command Chain Delay (Advice by Telit)
+				delay(_AT_WAIT_DELAY_);
+
+				// Send UART Command
+				GSM_Serial->print(F("AT#TCPMAXWIN="));
+				GSM_Serial->print(_WinSize);
+				GSM_Serial->print(F(","));
+				GSM_Serial->print(_ScaleFactor);
+				GSM_Serial->write(0x0D);
+				GSM_Serial->write(0x0A);
+
+				// Declare Buffer Object
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_TCPMAXWIN_, 7};
+
+				// Declare Buffer Variable
+				char _Buffer_Variable[_Buffer.Size];
+
+				// Clear Buffer Variable
+				memset(_Buffer_Variable, '\0', _Buffer.Size);
+
+				// Declare Response
+				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+
+				// End Function
+				return(_Buffer.Response == _AT_OK_);
+
+			}
+
 			// Socket Dial Function
 			bool ATSD(const uint8_t _Cid, const bool _Protocol, const char *_IP, const uint8_t _Port, const uint8_t _Closure_Type, uint16_t _IPort, const bool _Conn_Mode) {
 
