@@ -6,15 +6,15 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+### Planned
+
+- ...
+
 ### Added
 
 - ...
 
 ### Changed
-
-- ...
-
-### Deprecated
 
 - ...
 
@@ -32,30 +32,15 @@ All notable changes to this project will be documented in this file. The format 
 
 ---
 
+## [1.5.0] - 2024-03-14
+
+- All AT functions are moved to protected functions. With these change the library is more secure and stable.
+- SRING function (that just looks for SRING string) time out is changed form 50sn to 1sn.
+
+---
+
 ## [1.4.0] - 2024-03-08
 
-### Added
-
 - TCPMAXWIN Function added. (Firmware download CMEE error fix function.)
-
-### Changed
-
-- ...
-
-### Deprecated
-
-- ...
-
-### Removed
-
-- ...
-
-### Fixed
-
-- ...
-
-### Security
-
-- ...
 
 ---

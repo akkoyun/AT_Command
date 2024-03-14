@@ -27,7 +27,7 @@
 			#define _LE910C1_EUX_
 		#endif
 
-		// Private Variables
+		// Private Context
 		private:
 
 			// GSM Serial Stream Definition
@@ -39,7 +39,7 @@
 				uint16_t 			Read_Order;
 				uint16_t 			Data_Order;
 				const uint16_t 		Time_Out;
-				const uint16_t 			Size;
+				const uint16_t 		Size;
 			};
 
 			// Clear Serial Buffer Function
@@ -226,240 +226,11 @@
 
 			}
 
-		// Protected Variables
+		// Protected Context 
 		protected:
-
-			// Detect SRING Response.
-			bool SRING(uint16_t &_Length) {
-
-				// Declare Buffer Object
-				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, 50000, 30};
-
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Read Current Time
-				const uint32_t Current_Time = millis();
-
-				// \r\nOK\r\n\r\nSRING: 1,999\r\n		--> 22 Char
-				// \r\nOK\r\n\r\nSRING: 1,99\r\n		--> 21 Char
-				// \r\nOK\r\n\r\nSRING: 1,9\r\n			--> 20 Char
-				// \r\nSRING: 1,999\r\n					--> 16 Char
-				// \r\nSRING: 1,99\r\n					--> 15 Char
-				// \r\nSRING: 1,9\r\n					--> 14 Char
-
-				// Read UART Response
-				while (_Buffer.Response == _AT_TIMEOUT_) {
-
-					// Read Delay
-					delay(1);
-
-					// Read Serial Char
-					_Buffer_Variable[_Buffer.Read_Order] = GSM_Serial->read();
-
-					// Handle for Response
-					if (_Buffer.Read_Order == 21 && _Buffer_Variable[8] == 'S' && _Buffer_Variable[20] == '\r') {
-
-						// \r\nOK\r\n\r\nSRING: 1,999\r\n
-
-						// Geth Length from Buffer
-						uint8_t _Digit_1 = _Buffer_Variable[17] - 48;
-						uint8_t _Digit_2 = _Buffer_Variable[18] - 48;
-						uint8_t _Digit_3 = _Buffer_Variable[19] - 48;
-
-						// Calculate Length
-						_Length = (_Digit_1 * 100) + (_Digit_2 * 10) + _Digit_3;
-
-						// Set Response
-						_Buffer.Response = _AT_SRING_;
-
-						// End Function
-						return(true);
-
-					} else if (_Buffer.Read_Order == 20 && _Buffer_Variable[8] == 'S' && _Buffer_Variable[19] == '\r') {
-
-						// \r\nOK\r\n\r\nSRING: 1,99\r\n
-
-						// Geth Length from Buffer
-						uint8_t _Digit_1 = _Buffer_Variable[17] - 48;
-						uint8_t _Digit_2 = _Buffer_Variable[18] - 48;
-
-						// Calculate Length
-						_Length = (_Digit_1 * 10) + _Digit_2;
-
-						// Set Response
-						_Buffer.Response = _AT_SRING_;
-
-						// End Function
-						return(true);
-
-					} else if (_Buffer.Read_Order == 19 && _Buffer_Variable[8] == 'S' && _Buffer_Variable[18] == '\r') {
-
-						// \r\nOK\r\n\r\nSRING: 1,9\r\n
-
-						// Geth Length from Buffer
-						_Length = _Buffer_Variable[17] - 48;
-
-						// Set Response
-						_Buffer.Response = _AT_SRING_;
-
-						// End Function
-						return(true);
-
-					} else if (_Buffer.Read_Order == 15 && _Buffer_Variable[2] == 'S' && _Buffer_Variable[14] == '\r') {
-
-						// \r\nSRING: 1,999\r\n
-
-						// Geth Length from Buffer
-						uint8_t _Digit_1 = _Buffer_Variable[11] - 48;
-						uint8_t _Digit_2 = _Buffer_Variable[12] - 48;
-						uint8_t _Digit_3 = _Buffer_Variable[13] - 48;
-
-						// Calculate Length
-						_Length = (_Digit_1 * 100) + (_Digit_2 * 10) + _Digit_3;
-
-						// Set Response
-						_Buffer.Response = _AT_SRING_;
-
-						// End Function
-						return(true);
-
-					} else if (_Buffer.Read_Order == 14 && _Buffer_Variable[2] == 'S' && _Buffer_Variable[13] == '\r') {
-
-						// \r\nSRING: 1,99\r\n
-
-						// Geth Length from Buffer
-						uint8_t _Digit_1 = _Buffer_Variable[11] - 48;
-						uint8_t _Digit_2 = _Buffer_Variable[12] - 48;
-
-						// Calculate Length
-						_Length = (_Digit_1 * 10) + _Digit_2;
-
-						// Set Response
-						_Buffer.Response = _AT_SRING_;
-
-						// End Function
-						return(true);
-
-					} else if (_Buffer.Read_Order == 13 && _Buffer_Variable[2] == 'S' && _Buffer_Variable[12] == '\r') {
-
-						// \r\nSRING: 1,9\r\n
-
-						// Geth Length from Buffer
-						_Length = _Buffer_Variable[11] - 48;
-
-						// Set Response
-						_Buffer.Response = _AT_SRING_;
-
-						// End Function
-						return(true);
-
-					}
-
-					// Increase Read Order
-					if (isAscii(_Buffer_Variable[_Buffer.Read_Order]) || _Buffer_Variable[_Buffer.Read_Order] == '\r' || _Buffer_Variable[_Buffer.Read_Order] == '\n' || _Buffer_Variable[_Buffer.Read_Order] == ' ') _Buffer.Read_Order++;
-
-					// Handle for timeout
-					if (millis() - Current_Time >= _Buffer.Time_Out) return(false);
-
-				}
-
-				// End Function
-				return(false);
-
-			}
-			bool SRING(void) {
-
-				// Declare Buffer Object
-				Serial_Buffer Buffer = {
-					0, 		// Response State
-					0, 		// Read Order
-					0, 		// Data Order
-					50000, 	// Time Out
-					20		// Buffer Size
-				};
-
-				// Declare Buffer Variable
-				char Buffer_Variable[Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(Buffer_Variable, '\0', Buffer.Size);
-
-				// Read Current Time
-				const uint32_t Current_Time = millis();
-
-				// \r\nSRING: 3,108\r\n
-
-				// Read UART Response
-				while (!Buffer.Response) {
-
-					// Read Serial Char
-					Buffer_Variable[Buffer.Read_Order] = GSM_Serial->read();
-
-					// Handle for Message End
-					if (Buffer.Read_Order > 5 && Buffer_Variable[Buffer.Read_Order - 1] == '\r' && Buffer_Variable[Buffer.Read_Order] == '\n') Buffer.Response = true;
-
-					// Increase Read Order
-					if (Buffer_Variable[Buffer.Read_Order] > 31 && Buffer_Variable[Buffer.Read_Order] < 127) Buffer.Read_Order += 1;
-					if (Buffer_Variable[Buffer.Read_Order] == '\r') Buffer.Read_Order += 1;
-					if (Buffer_Variable[Buffer.Read_Order] == '\n') Buffer.Read_Order += 1;
-
-					// Handle for timeout
-					if (millis() - Current_Time >= Buffer.Time_Out) return(false);
-
-				}
-
-				// Control for SRING
-				if (strstr(Buffer_Variable, "\r\nSRING") != NULL) return(true);
-
-				// End Function
-				return(false);
-
-			}
-
-			// ASCII Find Function
-			uint16_t Find_Char(const char * _Buffer, const char _Char, const uint8_t _Count) {
-
-				// Declare Counter
-				uint16_t _Counter = 0;
-
-				// Find Char in Buffer
-				for (uint16_t i = 0; _Buffer[i] != '\0'; ++i) {
-
-					// Control for Char
-					if (_Buffer[i] == _Char) {
-
-						// Increase Counter
-						_Counter++;
-
-						// Control for Counter
-						if (_Counter == _Count) return(i);
-
-					}
-
-				}
-
-				// End Function
-				return(0);
-
-			}
-
-		// Public Variables
-		public:
 
 			// Callback Function Definition
 			typedef void (*Callback_JSON_Parse)();
-
-			// Constructor
-			explicit LE910C1_EUX(Stream &_Serial) {
-
-				// Set Serial Port
-				GSM_Serial = & _Serial;
-
-			}
 
 			// AT Command
 			bool AT(void) {
@@ -2771,6 +2542,191 @@
 
 			}
 
+			// Detect SRING Response.
+			bool SRING(uint16_t &_Length) {
+
+				// Declare Buffer Object
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, 50000, 30};
+
+				// Declare Buffer Variable
+				char _Buffer_Variable[_Buffer.Size];
+
+				// Clear Buffer Variable
+				memset(_Buffer_Variable, '\0', _Buffer.Size);
+
+				// Read Current Time
+				const uint32_t Current_Time = millis();
+
+				// \r\nOK\r\n\r\nSRING: 1,999\r\n		--> 22 Char
+				// \r\nOK\r\n\r\nSRING: 1,99\r\n		--> 21 Char
+				// \r\nOK\r\n\r\nSRING: 1,9\r\n			--> 20 Char
+				// \r\nSRING: 1,999\r\n					--> 16 Char
+				// \r\nSRING: 1,99\r\n					--> 15 Char
+				// \r\nSRING: 1,9\r\n					--> 14 Char
+
+				// Read UART Response
+				while (_Buffer.Response == _AT_TIMEOUT_) {
+
+					// Read Delay
+					delay(1);
+
+					// Read Serial Char
+					_Buffer_Variable[_Buffer.Read_Order] = GSM_Serial->read();
+
+					// Handle for Response
+					if (_Buffer.Read_Order == 21 && _Buffer_Variable[8] == 'S' && _Buffer_Variable[20] == '\r') {
+
+						// \r\nOK\r\n\r\nSRING: 1,999\r\n
+
+						// Geth Length from Buffer
+						uint8_t _Digit_1 = _Buffer_Variable[17] - 48;
+						uint8_t _Digit_2 = _Buffer_Variable[18] - 48;
+						uint8_t _Digit_3 = _Buffer_Variable[19] - 48;
+
+						// Calculate Length
+						_Length = (_Digit_1 * 100) + (_Digit_2 * 10) + _Digit_3;
+
+						// Set Response
+						_Buffer.Response = _AT_SRING_;
+
+						// End Function
+						return(true);
+
+					} else if (_Buffer.Read_Order == 20 && _Buffer_Variable[8] == 'S' && _Buffer_Variable[19] == '\r') {
+
+						// \r\nOK\r\n\r\nSRING: 1,99\r\n
+
+						// Geth Length from Buffer
+						uint8_t _Digit_1 = _Buffer_Variable[17] - 48;
+						uint8_t _Digit_2 = _Buffer_Variable[18] - 48;
+
+						// Calculate Length
+						_Length = (_Digit_1 * 10) + _Digit_2;
+
+						// Set Response
+						_Buffer.Response = _AT_SRING_;
+
+						// End Function
+						return(true);
+
+					} else if (_Buffer.Read_Order == 19 && _Buffer_Variable[8] == 'S' && _Buffer_Variable[18] == '\r') {
+
+						// \r\nOK\r\n\r\nSRING: 1,9\r\n
+
+						// Geth Length from Buffer
+						_Length = _Buffer_Variable[17] - 48;
+
+						// Set Response
+						_Buffer.Response = _AT_SRING_;
+
+						// End Function
+						return(true);
+
+					} else if (_Buffer.Read_Order == 15 && _Buffer_Variable[2] == 'S' && _Buffer_Variable[14] == '\r') {
+
+						// \r\nSRING: 1,999\r\n
+
+						// Geth Length from Buffer
+						uint8_t _Digit_1 = _Buffer_Variable[11] - 48;
+						uint8_t _Digit_2 = _Buffer_Variable[12] - 48;
+						uint8_t _Digit_3 = _Buffer_Variable[13] - 48;
+
+						// Calculate Length
+						_Length = (_Digit_1 * 100) + (_Digit_2 * 10) + _Digit_3;
+
+						// Set Response
+						_Buffer.Response = _AT_SRING_;
+
+						// End Function
+						return(true);
+
+					} else if (_Buffer.Read_Order == 14 && _Buffer_Variable[2] == 'S' && _Buffer_Variable[13] == '\r') {
+
+						// \r\nSRING: 1,99\r\n
+
+						// Geth Length from Buffer
+						uint8_t _Digit_1 = _Buffer_Variable[11] - 48;
+						uint8_t _Digit_2 = _Buffer_Variable[12] - 48;
+
+						// Calculate Length
+						_Length = (_Digit_1 * 10) + _Digit_2;
+
+						// Set Response
+						_Buffer.Response = _AT_SRING_;
+
+						// End Function
+						return(true);
+
+					} else if (_Buffer.Read_Order == 13 && _Buffer_Variable[2] == 'S' && _Buffer_Variable[12] == '\r') {
+
+						// \r\nSRING: 1,9\r\n
+
+						// Geth Length from Buffer
+						_Length = _Buffer_Variable[11] - 48;
+
+						// Set Response
+						_Buffer.Response = _AT_SRING_;
+
+						// End Function
+						return(true);
+
+					}
+
+					// Increase Read Order
+					if (isAscii(_Buffer_Variable[_Buffer.Read_Order]) || _Buffer_Variable[_Buffer.Read_Order] == '\r' || _Buffer_Variable[_Buffer.Read_Order] == '\n' || _Buffer_Variable[_Buffer.Read_Order] == ' ') _Buffer.Read_Order++;
+
+					// Handle for timeout
+					if (millis() - Current_Time >= _Buffer.Time_Out) return(false);
+
+				}
+
+				// End Function
+				return(false);
+
+			}
+			bool SRING(void) {
+
+				// Declare Buffer Object
+				Serial_Buffer Buffer = {_AT_TIMEOUT_, 0, 0, 1000, 20};
+
+				// Declare Buffer Variable
+				char Buffer_Variable[Buffer.Size];
+
+				// Clear Buffer Variable
+				memset(Buffer_Variable, '\0', Buffer.Size);
+
+				// Read Current Time
+				const uint32_t Current_Time = millis();
+
+				// \r\nSRING: 3,108\r\n
+
+				// Read UART Response
+				while (!Buffer.Response) {
+
+					// Read Serial Char
+					Buffer_Variable[Buffer.Read_Order] = GSM_Serial->read();
+
+					// Handle for Message End
+					if (Buffer.Read_Order > 5 && Buffer_Variable[Buffer.Read_Order - 1] == '\r' && Buffer_Variable[Buffer.Read_Order] == '\n') Buffer.Response = true;
+
+					// Increase Read Order
+					if (Buffer_Variable[Buffer.Read_Order] > 31 && Buffer_Variable[Buffer.Read_Order] < 127) Buffer.Read_Order += 1;
+					if (Buffer_Variable[Buffer.Read_Order] == '\r') Buffer.Read_Order += 1;
+					if (Buffer_Variable[Buffer.Read_Order] == '\n') Buffer.Read_Order += 1;
+
+					// Handle for timeout
+					if (millis() - Current_Time >= Buffer.Time_Out) return(false);
+
+				}
+
+				// Control for SRING
+				if (strstr(Buffer_Variable, "\r\nSRING") != NULL) return(true);
+
+				// End Function
+				return(false);
+
+			}
+
 			// Close FTP Connection Function
 			bool FTPCLOSE(void) {
 
@@ -3126,6 +3082,44 @@
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
+
+			}
+
+			// ASCII Find Function
+			uint16_t Find_Char(const char * _Buffer, const char _Char, const uint8_t _Count) {
+
+				// Declare Counter
+				uint16_t _Counter = 0;
+
+				// Find Char in Buffer
+				for (uint16_t i = 0; _Buffer[i] != '\0'; ++i) {
+
+					// Control for Char
+					if (_Buffer[i] == _Char) {
+
+						// Increase Counter
+						_Counter++;
+
+						// Control for Counter
+						if (_Counter == _Count) return(i);
+
+					}
+
+				}
+
+				// End Function
+				return(0);
+
+			}
+
+		// Public Context
+		public:
+
+			// Constructor
+			explicit LE910C1_EUX(Stream &_Serial) {
+
+				// Set Serial Port
+				GSM_Serial = & _Serial;
 
 			}
 
