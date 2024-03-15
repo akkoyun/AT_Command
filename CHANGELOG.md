@@ -10,6 +10,12 @@ All notable changes to this project will be documented in this file. The format 
 
 - ...
 
+## [1.7.0] - 2024-03-15
+
+- Parse_Number function name changed to Handle_Number
+- RFSTS function updated. TAC and CellID variables added. (TAC and CellID are used for location information.) 
+- RFSTS connection type attribute added. (Connection type is get from WS46 function.)
+
 ---
 
 ## [1.6.0] - 2024-03-15

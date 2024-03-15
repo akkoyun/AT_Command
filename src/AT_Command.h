@@ -168,7 +168,7 @@
 			}
 
 			// Get Parsed Number Function
-			uint32_t Parse_Number(const char * _Buffer, const char _Start_Char, const uint8_t _Start_Times, const char _End_Char, const uint8_t _End_Times) {
+			uint32_t Handle_Number(const char * _Buffer, const char _Start_Char, const uint8_t _Start_Times, const char _End_Char, const uint8_t _End_Times) {
 
 				// Handle Start Position
 				uint16_t _Start = this->Find_Char(_Buffer, _Start_Char, _Start_Times);
@@ -190,6 +190,32 @@
 
 				// Return Parsed Number
 				return(atoi(_Temp_Buffer));
+
+			}
+
+			// Get Parsed HEX Function
+			uint32_t Handle_HEX(const char * _Buffer, const char _Start_Char, const uint8_t _Start_Times, const char _End_Char, const uint8_t _End_Times) {
+
+				// Handle Start Position
+				uint16_t _Start = this->Find_Char(_Buffer, _Start_Char, _Start_Times);
+
+				// Handle End Position
+				uint16_t _End = this->Find_Char(_Buffer, _End_Char, _End_Times);
+
+				// Handle Size
+				uint16_t _Size = _End - _Start - 1;
+
+				// Declare Buffer
+				char _Temp_Buffer[_Size];
+
+				// Clear Buffer
+				memset(_Temp_Buffer, '\0', _Size);
+
+				// Copy Buffer
+				memcpy(_Temp_Buffer, &_Buffer[_Start + 1], _Size);
+
+				// Return Parsed Number
+				return(strtol(_Temp_Buffer, NULL, 16));
 
 			}
 
@@ -1375,7 +1401,10 @@
 			}
 
 			// RFSTS Function
-			bool RFSTS(uint16_t & _MCC, uint16_t & _MNC, uint16_t & _RSSI, uint8_t & _Signal_Level) {
+			bool RFSTS(const uint8_t _Connection_Type, uint16_t & _MCC, uint16_t & _MNC, uint16_t & _RSSI, uint8_t & _Signal_Level, uint16_t & _TAC, uint32_t & _CID) {
+
+				// Control for Connection Type
+				if (_Connection_Type == _CONNECTION_UNKNOWN_) return(false);
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -1403,58 +1432,65 @@
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
 
-					// AT#RFSTS\r\n
-					// \r\n#RFSTS: "286 01",1795,-101,-67,-15,2242,,128,3,1,0B5D121,"286016339612498","Turkcell",3,3,108\r\n\r\nOK\r\n
-					// \r\n#RFSTS: "286 01",1651,-101,-66,-15,2242,,128,3,1,0B5D120,"286016339612498","Turkcell",3,3,121\r\n\r\nOK\r\n
+					// Control for Connection Type
+					if (_Connection_Type == _CONNECTION_2G_) {
 
-					// #RFSTS:<PLMN>,<EARFCN>,<RSRP>,<RSSI>,<RSRQ>,<TAC>,<RAC>,[<TXPWR>],<DR X>, <MM>,<RRC>,<CID>,<IMSI>,[<NetNameAsc>],<SD>,<ABND>,<T3402>,<T3412>,<SI NR>
-					//
-					// <PLMN> 		- Country code and operator code(MCC, MNC)						+ "286 01"
-					// <EARFCN> 	- E-UTRA Assigned Radio Channel									- 6400	
-					// <RSRP> 		- Reference Signal Received Power								- -100
-					// <RSSI> 		- Received Signal Strength Indication							+ -66
-					// <RSRQ> 		- Reference Signal Received Quality								- -18
-					// <TAC> 		- Tracking Area Code											+ 2242
-					// <RAC> 		- Routing Area Code												- FF
-					// <TXPWR> 		- Tx Power (In traffic only)									- 0
-					// <DR X> 		- Discontinuous reception cycle Length (cycle length in ms)		- 128
-					// <MM> 		- Mobility Management state (for debug purpose only)			- 10
-					// <RRC> 		- Radio Resource state (for debug purpose only)					- 1
-					// <CID> 		- Cell ID														+ 859315
-					// <IMSI> 		- International Mobile Station ID								- "286016339811626"
-					// <NetNameAsc> - Operator name													- "TR TURKCELL"
-					// <SD> 		- Service Domain												- 3
-					// <ABND> 		- Active Band													- 20
-					// <T3402> 		- Timer T3402 in seconds										- 720
-					// <T3412> 		- Timer T3412 in seconds										- 3240
-					// <SI NR> 		- Signal-to-Interface plus Noise Ratio							- -5
+					} else if (_Connection_Type == _CONNECTION_3G_) {
 
-					// Example Response
-					// \r\n#RFSTS: "286 01",1651,-101,-66,-15,2242,,128,3,1,0B5D120,"286016339612498","Turkcell",3,3,121\r\n\r\nOK\r\n
-					// \r\n#RFSTS: "286 01",1651,-100,-66,-14,2242,,128,3,0,0B5D120,"286016339612498","Turkcell",3,3,126\r\n\r\nOK\r\n
-					// \r\n#RFSTS: "286 01",1795,-101,-73,-10,2242,,128,3,0,0B5D121,"286016339612498","Turkcell",3,3,138\r\n\r\nOK\r\n
-					// \r\n#RFSTS: "286 01",100,-98,-68,-10,2242,227,128,3,1,0B5D125,"286016339612498","Turkcell",3,1,120\r\n\r\nOK\r\n
-					// \r\n#RFSTS: "286 01",1651,-99,-63,-14,2242,,128,3,1,0B5D120,"286016339612498","Turkcell",3,3,101\r\n\r\nOK\r\n
-					// \r\n#RFSTS: "286 01",1651,-99,-68,-12,2242,,128,3,1,0B5D120,"286016339612498","Turkcell",3,3,128\r\n\r\nOK\r\n
-					// \r\n#RFSTS: "286 01",1795,-102,-69,-15,2242,,128,3,1,0B5D121,"286016339612498","Turkcell",3,3,102\r\n\r\nOK\r\n
-					// \r\n#RFSTS: "286 01",1651,-99,-67,-12,2242,,128,3,1,0B5D120,"286016339612498","Turkcell",3,3,126\r\n\r\nOK\r\n
-					// \r\n#RFSTS: "286 01",1651,-99,-64,-14,2242,,128,3,1,0B5D120,"286016339612498","Turkcell",3,3,107\r\n\r\nOK\r\n
+					} else if (_Connection_Type == _CONNECTION_4G_) {
 
-					// Read MCC
-					_MCC = (uint16_t)this->Parse_Number(_Buffer_Variable, '\"', 1, ' ', 2);
+						// AT#RFSTS\r\n
+						// \r\n#RFSTS: "286 01",1795,-101,-67,-15,2242,,128,3,1,0B5D121,"286016339612498","Turkcell",3,3,108\r\n\r\nOK\r\n
+						// \r\n#RFSTS: "286 01",1651,-101,-66,-15,2242,,128,3,1,0B5D120,"286016339612498","Turkcell",3,3,121\r\n\r\nOK\r\n
+						// \r\n#RFSTS: "286 01",1651,-99,-62,-16,2242,,128,3,1,0B5D120,"286016339612498","Turkcell",3,3,103\r\n\r\nOK\r\n
 
-					// Read MNC
-					_MNC = (uint16_t)this->Parse_Number(_Buffer_Variable, ' ', 2, '\"', 2);
+						// #RFSTS:<PLMN>,<EARFCN>,<RSRP>,<RSSI>,<RSRQ>,<TAC>,<RAC>,[<TXPWR>],<DR X>, <MM>,<RRC>,<CID>,<IMSI>,[<NetNameAsc>],<SD>,<ABND>,<T3402>,<T3412>,<SI NR>
 
-					// Read RSSI
-					_RSSI = (uint16_t)this->Parse_Number(_Buffer_Variable, '-', 2, ',', 4);
+						// <PLMN> 		- Country code and operator code(MCC, MNC)						+ "286 01"
+						// <RSSI> 		- Received Signal Strength Indication							+ -66
+						// <TAC> 		- Tracking Area Code											+ 2242
+						// <CID> 		- Cell ID														+ 859315
 
-					// Calculate Signal Level
-					_Signal_Level = 0;
-					_Signal_Level = this->RSSI_to_Signal_Quality(_RSSI * -1);
+						//              MCC MNC          RSSI     TAC            CID
+						//               |   |             |       |              |
+						// \r\n#RFSTS: "286 01",1651,-99,-62,-16,2242,,128,3,1,0B5D120,"286016339612498","Turkcell",3,3,103\r\n\r\nOK\r\n
 
-					// End Function
-					return(true);
+						// Read MCC
+						_MCC = (uint16_t)this->Handle_Number(_Buffer_Variable, '\"', 1, ' ', 2);
+
+						// Read MNC
+						_MNC = (uint16_t)this->Handle_Number(_Buffer_Variable, ' ', 2, '\"', 2);
+
+						// Read RSSI
+						_RSSI = (uint16_t)this->Handle_Number(_Buffer_Variable, '-', 2, ',', 4);
+
+						// Calculate Signal Level
+						_Signal_Level = 0;
+						_Signal_Level = this->RSSI_to_Signal_Quality(_RSSI * -1);
+
+						// Read TAC
+						_TAC = (uint16_t)this->Handle_HEX(_Buffer_Variable, ',', 5, ',', 6);
+
+						// Read CID
+						_CID = (uint32_t)this->Handle_HEX(_Buffer_Variable, ',', 10, ',', 11);
+
+						// End Function
+						return(true);
+
+					} else {
+
+						// Clear Variables
+						_MCC = 0;
+						_MNC = 0;
+						_RSSI = 0;
+						_Signal_Level = 0;
+						_TAC = 0;
+						_CID = 0;
+
+						// End Function
+						return(false);
+
+					}
 
 				}
 
@@ -1500,7 +1536,7 @@
 					// \r\n+CSQ: 999,99\r\n\r\nOK\r\n
 
 					// Read MCC
-					uint8_t _CSQ = this->Parse_Number(_Buffer_Variable, ' ', 1, ',', 1);
+					uint8_t _CSQ = this->Handle_Number(_Buffer_Variable, ' ', 1, ',', 1);
 
 					// Calculate RSSI
 					if (_CSQ == 0) _RSSI = 113;
@@ -1839,13 +1875,13 @@
 					*/
 
 					// Handle Variables
-					_Year = this->Parse_Number(_Buffer_Variable, '\"', 1, '/', 1);
-					_Month = this->Parse_Number(_Buffer_Variable, '/', 1, '/', 2);
-					_Day = this->Parse_Number(_Buffer_Variable, '/', 2, ',', 1);
-					_Hour = this->Parse_Number(_Buffer_Variable, ',', 1, ':', 2);
-					_Minute = this->Parse_Number(_Buffer_Variable, ':', 2, ':', 3);
-					_Second = this->Parse_Number(_Buffer_Variable, ':', 3, '+', 2);
-					_Time_Zone = this->Parse_Number(_Buffer_Variable, '+', 2, '\"', 2);
+					_Year = this->Handle_Number(_Buffer_Variable, '\"', 1, '/', 1);
+					_Month = this->Handle_Number(_Buffer_Variable, '/', 1, '/', 2);
+					_Day = this->Handle_Number(_Buffer_Variable, '/', 2, ',', 1);
+					_Hour = this->Handle_Number(_Buffer_Variable, ',', 1, ':', 2);
+					_Minute = this->Handle_Number(_Buffer_Variable, ':', 2, ':', 3);
+					_Second = this->Handle_Number(_Buffer_Variable, ':', 3, '+', 2);
+					_Time_Zone = this->Handle_Number(_Buffer_Variable, '+', 2, '\"', 2);
 
 					// Control for Variables
 					if (_Year > 99 || _Year < 22 || _Month > 12 || _Day > 31 || _Hour > 24 || _Minute > 59 || _Second > 59) return false;
@@ -2254,7 +2290,7 @@
 					// \r\n#SI: 2,51,0,13900,0\r\n\r\nOK\r\n
 
 					// Read Data Buffer
-					_Data_Buffer = (uint16_t)this->Parse_Number(_Buffer_Variable, ',', 3, ',', 4);
+					_Data_Buffer = (uint16_t)this->Handle_Number(_Buffer_Variable, ',', 3, ',', 4);
 
 					// End Function
 					return(true);
@@ -2859,7 +2895,7 @@
 					// \r\n#FTPFSIZE: 174945\r\n\r\nOK\r\n
 
 					// Parse Length
-					_Length = this->Parse_Number(_Buffer_Variable, ':', 1, '\r', 2);
+					_Length = this->Handle_Number(_Buffer_Variable, ':', 1, '\r', 2);
 
 					// End Function
 					return (true);
@@ -2978,7 +3014,7 @@
 					// \r\n#FTPRECV: 200\r\n20202055\r\n:100BA00020202020000D0A002C002C002C00415495\r\n:100BB00023534C3D000D0A004154234532534C52FF\r\n:100BC000493D000D0A00415423534C4544534156BE\r\n:100BD000000D0A00415423534C45443D000D0A00CA\r\n:100BE0004\r\n\r\nOK\r\n
 
 					// Parse Size
-					_ReadSize = (uint16_t)this->Parse_Number(_Buffer_Variable, ' ', 1, '\r', 2);
+					_ReadSize = (uint16_t)this->Handle_Number(_Buffer_Variable, ' ', 1, '\r', 2);
 
 					// End Function
 					return (true);
