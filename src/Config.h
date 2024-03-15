@@ -158,6 +158,9 @@
 #ifndef _TIMEOUT_SO_
 	#define _TIMEOUT_SO_				   	(uint16_t)5000
 #endif
+#ifndef _TIMEOUT_SKTTO_
+	#define _TIMEOUT_SKTTO_				   	(uint16_t)1000
+#endif
 #ifndef _TIMEOUT_SI_
 	#define _TIMEOUT_SI_				   	(uint16_t)1000
 #endif

@@ -10,25 +10,12 @@ All notable changes to this project will be documented in this file. The format 
 
 - ...
 
-### Added
+---
 
-- ...
+## [1.6.0] - 2024-03-15
 
-### Changed
-
-- ...
-
-### Removed
-
-- ...
-
-### Fixed
-
-- ...
-
-### Security
-
-- ...
+- SKTTO Function added. (Socket timeout function.)
+- _TIMEOUT_SKTTO_ constant added. (Socket timeout constant.)
 
 ---
 

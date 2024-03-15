@@ -2266,6 +2266,38 @@
 
 			}
 
+			// Socket Inactivity Timeout Function
+			bool SKTTO(const uint16_t _TimeOut = 90) {
+
+				// Clear UART Buffer
+				this->Clear_UART_Buffer();
+
+				// Command Chain Delay (Advice by Telit)
+				delay(_AT_WAIT_DELAY_);
+
+				// Send UART Command
+				GSM_Serial->print(F("AT#SKTTO="));
+				GSM_Serial->print(_TimeOut);
+				GSM_Serial->write(0x0D);
+				GSM_Serial->write(0x0A);
+
+				// Declare Buffer Object
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SKTTO_, 7};
+
+				// Declare Buffer Variable
+				char _Buffer_Variable[_Buffer.Size];
+
+				// Clear Buffer Variable
+				memset(_Buffer_Variable, '\0', _Buffer.Size);
+
+				// Declare Response
+				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+
+				// End Function
+				return(_Buffer.Response == _AT_OK_);
+
+			}
+
 			// Socket Pack Send Function
 			bool SSEND(Callback_JSON_Parse _Parser) {
 
