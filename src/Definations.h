@@ -108,10 +108,13 @@
 // Define FOTA Status
 // ------------------
 #define FOTA_Download_OK					(uint8_t)1
+
 #define FOTA_Download_TimeOut				(uint8_t)20
 #define FOTA_Download_Size_Error			(uint8_t)21
 #define FOTA_Download_Not_Save				(uint8_t)22
-#define FOTA_SD_Error						(uint8_t)30
-#define FOTA_Download_MD5_Error				(uint8_t)99
 #define FOTA_Server_Error					(uint8_t)23
 #define FOTA_Download_CME_Error				(uint8_t)24
+#define FOTA_SD_Error						(uint8_t)30
+#define FOTA_FTP_Config_Error				(uint8_t)50
+#define FOTA_FTP_Connect_Error				(uint8_t)51
+#define FOTA_Download_MD5_Error				(uint8_t)99

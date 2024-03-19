@@ -167,32 +167,6 @@
 
 			}
 
-			// Get Parsed Number Function
-			uint32_t Handle_Number(const char * _Buffer, const char _Start_Char, const uint8_t _Start_Times, const char _End_Char, const uint8_t _End_Times) {
-
-				// Handle Start Position
-				uint16_t _Start = this->Find_Char(_Buffer, _Start_Char, _Start_Times);
-
-				// Handle End Position
-				uint16_t _End = this->Find_Char(_Buffer, _End_Char, _End_Times);
-
-				// Handle Size
-				uint16_t _Size = _End - _Start - 1;
-
-				// Declare Buffer
-				char _Temp_Buffer[_Size];
-
-				// Clear Buffer
-				memset(_Temp_Buffer, '\0', _Size);
-
-				// Copy Buffer
-				memcpy(_Temp_Buffer, &_Buffer[_Start + 1], _Size);
-
-				// Return Parsed Number
-				return(atoi(_Temp_Buffer));
-
-			}
-
 			// Get Parsed HEX Function
 			uint32_t Handle_HEX(const char * _Buffer, const char _Start_Char, const uint8_t _Start_Times, const char _End_Char, const uint8_t _End_Times) {
 
@@ -257,6 +231,32 @@
 
 			// Callback Function Definition
 			typedef void (*Callback_JSON_Parse)();
+
+			// Get Parsed Number Function
+			uint32_t Handle_Number(const char * _Buffer, const char _Start_Char, const uint8_t _Start_Times, const char _End_Char, const uint8_t _End_Times) {
+
+				// Handle Start Position
+				uint16_t _Start = this->Find_Char(_Buffer, _Start_Char, _Start_Times);
+
+				// Handle End Position
+				uint16_t _End = this->Find_Char(_Buffer, _End_Char, _End_Times);
+
+				// Handle Size
+				uint16_t _Size = _End - _Start - 1;
+
+				// Declare Buffer
+				char _Temp_Buffer[_Size];
+
+				// Clear Buffer
+				memset(_Temp_Buffer, '\0', _Size);
+
+				// Copy Buffer
+				memcpy(_Temp_Buffer, &_Buffer[_Start + 1], _Size);
+
+				// Return Parsed Number
+				return(atoi(_Temp_Buffer));
+
+			}
 
 			// AT Command
 			bool AT(void) {
@@ -2525,29 +2525,30 @@
 					if (_Method == _HTTP_RESPONSE_) {
 
 						// Print Header
-						GSM_Serial->print(F("HTTP/1.1 "));
-						GSM_Serial->print(F("200"));
-						GSM_Serial->print(F(" OK\r\nConnection: close\r\nContent-Type: application/json\r\n\r\n"));
+						GSM_Serial->print(F("HTTP/1.1 200 OK\r\n"));
+						GSM_Serial->print(F("Connection: close\r\n"));
+						GSM_Serial->print(F("Content-Type: application/json\r\n"));
+						GSM_Serial->print(F("\r\n"));
 
 					} else if (_Method == _HTTP_POST_) {
 
 						// Print Header
-						GSM_Serial->print(F("POST "));
-						GSM_Serial->print(_EndPoint);
-						GSM_Serial->print(F(" HTTP/1.1\r\nHost: "));
-						GSM_Serial->print(_Server);
-						GSM_Serial->print(F("\r\nContent-Length: "));
-						GSM_Serial->print(strlen(_Data_Pack));
-						GSM_Serial->print(F("\r\nContent-Type: application/json\r\nUser-Agent: PostOffice\r\n\r\n"));
+						GSM_Serial->print(F("POST ")); GSM_Serial->print(_EndPoint); GSM_Serial->print(F(" HTTP/1.1\r\n"));
+						GSM_Serial->print(F("Host: ")); GSM_Serial->print(_Server); GSM_Serial->print(F("\r\n"));
+						GSM_Serial->print(F("Host: ")); GSM_Serial->print(strlen(_Data_Pack)); GSM_Serial->print(F("\r\n"));
+						GSM_Serial->print(F("Content-Type: application/json\r\n")); 
+						GSM_Serial->print(F("User-Agent: PostOffice\r\n"));
+						GSM_Serial->print(F("\r\n"));
 
 					} else if (_Method == _HTTP_GET_) {
 
 						// Print Header
-						GSM_Serial->print(F("GET "));
-						GSM_Serial->print(_EndPoint);
-						GSM_Serial->print(F(" HTTP/1.1\r\nHost: "));
-						GSM_Serial->print(_Server);
-						GSM_Serial->print(F("\r\nUser-Agent: PostOffice\r\n\r\n"));
+						GSM_Serial->print(F("GET ")); GSM_Serial->print(_EndPoint); GSM_Serial->print(F(" HTTP/1.1\r\n"));
+						GSM_Serial->print(F("Host: ")); GSM_Serial->print(_Server); GSM_Serial->print(F("\r\n"));
+						GSM_Serial->print(F("Connection: keep-alive\r\n"));
+						GSM_Serial->print(F("Cache-Control: no-cache\r\n"));
+						GSM_Serial->print(F("User-Agent: PostOffice\r\n"));
+						GSM_Serial->print(F("\r\n"));
 
 					}
 
@@ -2861,7 +2862,7 @@
 			}
 
 			// Get FTP File Size Function
-			bool FTPFSIZE(const uint16_t _FileName, uint32_t & _Length) {
+			bool FTPFSIZE(const char * _FileName, uint32_t & _Length) {
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -2893,9 +2894,10 @@
 				if (_Buffer.Response == _AT_OK_) {
 
 					// \r\n#FTPFSIZE: 174945\r\n\r\nOK\r\n
+					// \r\n#FTPFSIZE: 329463\r\n\r\nOK\r\n
 
 					// Parse Length
-					_Length = this->Handle_Number(_Buffer_Variable, ':', 1, '\r', 2);
+					sscanf(_Buffer_Variable, "\r\n#FTPFSIZE: %lu\r\n\r\nOK\r\n", &_Length);
 
 					// End Function
 					return (true);
@@ -2908,7 +2910,7 @@
 			}
 
 			// Get FTP File to Buffer function
-			bool FTPGETPKT(const uint16_t _FileName, const uint8_t _ViewMode) {
+			bool FTPGETPKT(const char * _FileName, const uint8_t _ViewMode) {
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -2965,7 +2967,7 @@
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPOPEN_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPOPEN_, 30};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2982,13 +2984,13 @@
 			}
 
 			// Get FTP File From Buffer Function
-			bool FTPRECV(const uint16_t _Size, uint16_t & _ReadSize, uint8_t & _State, char * _Data) {
+			bool FTPRECV(const uint16_t _Size, char * _Data) {
 
 				// Clear UART Buffer
-				this->Clear_UART_Buffer();
+//				this->Clear_UART_Buffer();
 
 				// Command Chain Delay (Advice by Telit)
-				delay(_AT_WAIT_DELAY_);
+//				delay(_AT_WAIT_DELAY_);
 
 				// Send UART Command
 				GSM_Serial->print(F("AT#FTPRECV="));
@@ -2997,7 +2999,7 @@
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPRECV_, 255};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPRECV_, 1024};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -3014,7 +3016,7 @@
 					// \r\n#FTPRECV: 200\r\n20202055\r\n:100BA00020202020000D0A002C002C002C00415495\r\n:100BB00023534C3D000D0A004154234532534C52FF\r\n:100BC000493D000D0A00415423534C4544534156BE\r\n:100BD000000D0A00415423534C45443D000D0A00CA\r\n:100BE0004\r\n\r\nOK\r\n
 
 					// Parse Size
-					_ReadSize = (uint16_t)this->Handle_Number(_Buffer_Variable, ' ', 1, '\r', 2);
+					strcpy(_Data, _Buffer_Variable);
 
 					// End Function
 					return (true);
