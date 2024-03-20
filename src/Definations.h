@@ -8,6 +8,11 @@
 #define _AT_SET_				    		(bool)true
 #define _AT_GET_				    		(bool)false
 
+// Download Mode Definitions
+// -------------------------
+#define _FOTA_GET_				    		(bool)true
+#define _FOTA_FTP_				    		(bool)false
+
 // Manufacturer Definitions
 // -----------------------
 #define _MODEM_MANUFACTURER_UNKNOWN_		(uint8_t)0
@@ -107,14 +112,20 @@
 
 // Define FOTA Status
 // ------------------
+#define FOTA_Download_Unknown				(uint8_t)0
 #define FOTA_Download_OK					(uint8_t)1
-
 #define FOTA_Download_TimeOut				(uint8_t)20
 #define FOTA_Download_Size_Error			(uint8_t)21
 #define FOTA_Download_Not_Save				(uint8_t)22
 #define FOTA_Server_Error					(uint8_t)23
 #define FOTA_Download_CME_Error				(uint8_t)24
 #define FOTA_SD_Error						(uint8_t)30
-#define FOTA_FTP_Config_Error				(uint8_t)50
+#define FOTA_FTP_Login_Error				(uint8_t)50
 #define FOTA_FTP_Connect_Error				(uint8_t)51
+#define FOTA_FTP_Config_Error				(uint8_t)52
+#define FOTA_FTP_File_Not_Found				(uint8_t)53
+#define FOTA_FTP_File_Size_Error			(uint8_t)54
+
+
 #define FOTA_Download_MD5_Error				(uint8_t)99
+

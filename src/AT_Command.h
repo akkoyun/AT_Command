@@ -167,6 +167,32 @@
 
 			}
 
+			// Get Parsed Number Function
+			uint32_t Handle_Number(const char * _Buffer, const char _Start_Char, const uint8_t _Start_Times, const char _End_Char, const uint8_t _End_Times) {
+
+				// Handle Start Position
+				uint16_t _Start = this->Find_Char(_Buffer, _Start_Char, _Start_Times);
+
+				// Handle End Position
+				uint16_t _End = this->Find_Char(_Buffer, _End_Char, _End_Times);
+
+				// Handle Size
+				uint16_t _Size = _End - _Start - 1;
+
+				// Declare Buffer
+				char _Temp_Buffer[_Size];
+
+				// Clear Buffer
+				memset(_Temp_Buffer, '\0', _Size);
+
+				// Copy Buffer
+				memcpy(_Temp_Buffer, &_Buffer[_Start + 1], _Size);
+
+				// Return Parsed Number
+				return(atoi(_Temp_Buffer));
+
+			}
+
 			// Get Parsed HEX Function
 			uint32_t Handle_HEX(const char * _Buffer, const char _Start_Char, const uint8_t _Start_Times, const char _End_Char, const uint8_t _End_Times) {
 
@@ -190,6 +216,33 @@
 
 				// Return Parsed Number
 				return(strtol(_Temp_Buffer, NULL, 16));
+
+			}
+
+			// ASCII Find Function
+			uint16_t Find_Char(const char * _Buffer, const char _Char, const uint8_t _Count) {
+
+				// Declare Counter
+				uint16_t _Counter = 0;
+
+				// Find Char in Buffer
+				for (uint16_t i = 0; _Buffer[i] != '\0'; ++i) {
+
+					// Control for Char
+					if (_Buffer[i] == _Char) {
+
+						// Increase Counter
+						_Counter++;
+
+						// Control for Counter
+						if (_Counter == _Count) return(i);
+
+					}
+
+				}
+
+				// End Function
+				return(0);
 
 			}
 
@@ -231,32 +284,6 @@
 
 			// Callback Function Definition
 			typedef void (*Callback_JSON_Parse)();
-
-			// Get Parsed Number Function
-			uint32_t Handle_Number(const char * _Buffer, const char _Start_Char, const uint8_t _Start_Times, const char _End_Char, const uint8_t _End_Times) {
-
-				// Handle Start Position
-				uint16_t _Start = this->Find_Char(_Buffer, _Start_Char, _Start_Times);
-
-				// Handle End Position
-				uint16_t _End = this->Find_Char(_Buffer, _End_Char, _End_Times);
-
-				// Handle Size
-				uint16_t _Size = _End - _Start - 1;
-
-				// Declare Buffer
-				char _Temp_Buffer[_Size];
-
-				// Clear Buffer
-				memset(_Temp_Buffer, '\0', _Size);
-
-				// Copy Buffer
-				memcpy(_Temp_Buffer, &_Buffer[_Start + 1], _Size);
-
-				// Return Parsed Number
-				return(atoi(_Temp_Buffer));
-
-			}
 
 			// AT Command
 			bool AT(void) {
@@ -2845,7 +2872,7 @@
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPCWD_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPCWD_, 30};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -2928,7 +2955,7 @@
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPGETPKT_, 20};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPGETPKT_, 30};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -3044,7 +3071,7 @@
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPTO_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPTO_, 30};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -3076,7 +3103,7 @@
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPTYPE_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPTYPE_, 30};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -3152,33 +3179,6 @@
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
-
-			}
-
-			// ASCII Find Function
-			uint16_t Find_Char(const char * _Buffer, const char _Char, const uint8_t _Count) {
-
-				// Declare Counter
-				uint16_t _Counter = 0;
-
-				// Find Char in Buffer
-				for (uint16_t i = 0; _Buffer[i] != '\0'; ++i) {
-
-					// Control for Char
-					if (_Buffer[i] == _Char) {
-
-						// Increase Counter
-						_Counter++;
-
-						// Control for Counter
-						if (_Counter == _Count) return(i);
-
-					}
-
-				}
-
-				// End Function
-				return(0);
 
 			}
 
