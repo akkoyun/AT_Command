@@ -283,7 +283,7 @@
 		protected:
 
 			// Callback Function Definition
-			typedef void (*Callback_JSON_Parse)();
+			typedef void (*Callback_JSON_Parse)(uint8_t);
 
 			// AT Command
 			bool AT(void) {
@@ -2362,7 +2362,7 @@
 			}
 
 			// Socket Pack Send Function
-			bool SSEND(Callback_JSON_Parse _Parser) {
+			bool SSEND(Callback_JSON_Parse _Parser, uint8_t _Pack_Type) {
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -2395,7 +2395,7 @@
 					delay(10);
 
 					// Send Data Pack
-					if (_Parser) _Parser();
+					if (_Parser) _Parser(_Pack_Type);
 
 					// Print End Char
 					GSM_Serial->print((char)26);
