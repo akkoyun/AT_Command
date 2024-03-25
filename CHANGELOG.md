@@ -12,6 +12,10 @@ All notable changes to this project will be documented in this file. The format 
 
 ---
 
+## [1.8.3]
+
+- CID variable is updated.
+
 ## [1.8.2]
 
 - Callback_JSON_Parse function is updated.

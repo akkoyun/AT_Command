@@ -128,4 +128,3 @@
 
 
 #define FOTA_Download_MD5_Error				(uint8_t)99
-

@@ -2372,7 +2372,7 @@
 
 				// Send UART Command
 				GSM_Serial->print(F("AT#SSEND="));
-				GSM_Serial->print(_PostMan_Outgoing_Socket_);
+				GSM_Serial->print(_PostMan_CID_);
 				GSM_Serial->write(0x0D);
 				GSM_Serial->write(0x0A);
 

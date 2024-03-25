@@ -17,11 +17,8 @@
 
 // Socket ID Definitions
 // ---------------------
-#ifndef _PostMan_Incomming_Socket_
-	#define _PostMan_Incomming_Socket_		(uint8_t)3
-#endif
-#ifndef _PostMan_Outgoing_Socket_
-	#define _PostMan_Outgoing_Socket_		(uint8_t)2
+#ifndef _PostMan_CID_
+	#define _PostMan_CID_					(uint8_t)1
 #endif
 
 // Configuration Definitions
