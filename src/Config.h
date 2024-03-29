@@ -167,6 +167,12 @@
 #ifndef _TIMEOUT_SRECV_
 	#define _TIMEOUT_SRECV_				   	(uint16_t)5000
 #endif
+#ifndef _TIMEOUT_DNS_
+	#define _TIMEOUT_DNS_			  	 	(uint16_t)1000
+#endif
+#ifndef _TIMEOUT_CACHEDNS_
+	#define _TIMEOUT_CACHEDNS_			   	(uint16_t)1000
+#endif
 #ifndef _TIMEOUT_FTPCLOSE_
 	#define _TIMEOUT_FTPCLOSE_				(uint16_t)65000
 #endif

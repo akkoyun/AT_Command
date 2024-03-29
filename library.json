@@ -1,6 +1,6 @@
 {
 	"name": "AT_Command",
-	"version": "1.8.3",
+	"version": "1.9.0",
 	"keywords": "AT, Command, AT_Command, Telit, Quectel, Sierra Wireless, Sierra, u-blox, Simcom, Huawei, Fibocom, Thales, 2G, 3G, 4G, LTE, GSM, GPRS, UMTS, HSPA, HSPA+, LTE-M, NB-IoT, CAT-M, CAT-NB, AT, FCLASS, CGMI, CGMM, SWPKGV, CGSN, CFUN, CMEE, CEER, ATE, K, CPIN, CCID, SIMDET, GPIO, SLED, SLEDSAV, E2SLRI, CREG, CGDCONT, SGACT, WS46, RFSTS, MONI, SCFG, SCFGEXT, SCFGEXT2, SCFGEXT3, FRWL, ICMP, Ping, CCLK, CTZU, NITZ, CCLKMODE, ATSD, SH, SL, SA, SS, SO, SI, SSEND, SRECV, FTPCLOSE, FTPCWD, FTPFSIZE, FTPGETPKT, FTPOPEN, FTPRECV, FTPTO, FTPTYPE, Z, SHDN, Modem, SIM, SIM Card",
 	"description": "AT Command Library for Telit GSM Modules. This library is designed to help developers to use AT commands to communicate with Telit GSM modules. It is also compatible with Quectel, Sierra Wireless, u-blox, Simcom, Huawei, Fibocom, Thales and other GSM modules.",
 	"authors":

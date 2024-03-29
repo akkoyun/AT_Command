@@ -12,6 +12,12 @@ All notable changes to this project will be documented in this file. The format 
 
 ---
 
+## [1.9.0]
+
+- Ping function updated.
+- DNS function added.
+- CACHEDNS function added.
+
 ## [1.8.3]
 
 - CID variable is updated.

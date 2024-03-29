@@ -125,6 +125,4 @@
 #define FOTA_FTP_Config_Error				(uint8_t)52
 #define FOTA_FTP_File_Not_Found				(uint8_t)53
 #define FOTA_FTP_File_Size_Error			(uint8_t)54
-
-
 #define FOTA_Download_MD5_Error				(uint8_t)99

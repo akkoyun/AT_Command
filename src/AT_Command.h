@@ -1832,7 +1832,7 @@
 			}
 
 			// Ping Function
-			bool Ping(const char * _IP) {
+			bool Ping(const char * _IP, uint16_t _Time) {
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -1848,7 +1848,7 @@
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_Ping_, 150};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_Ping_, 250};
 
 				// Declare Buffer Variable
 				char _Buffer_Variable[_Buffer.Size];
@@ -1862,8 +1862,19 @@
 				// \r\n#PING: 01,"159.89.111.150",0,51\r\n
 				// \r\nOK\r\n
 
+				// Handle for Response
+				if (_Buffer.Response == _AT_OK_) {
+
+					// Get Response Time
+					_Time = (uint16_t)this->Handle_Number(_Buffer_Variable, ',', 2, '\r', 2);
+
+					// End Function
+					return(true);
+
+				}
+
 				// End Function
-				return(_Buffer.Response == _AT_OK_);
+				return(false);
 
 			}
 
@@ -2820,6 +2831,75 @@
 
 				// End Function
 				return(false);
+
+			}
+
+			// Nanual DNS Selection Function
+			bool DNS(const uint8_t _ConnID, const char * _Primary, const char * _Secondary) {
+
+				// Clear UART Buffer
+				this->Clear_UART_Buffer();
+
+				// Command Chain Delay (Advice by Telit)
+				delay(_AT_WAIT_DELAY_);
+
+				// Send UART Command
+				GSM_Serial->print(F("AT#DNS="));
+				GSM_Serial->print(_ConnID);
+				GSM_Serial->print(F("\""));
+				GSM_Serial->print(_Primary);
+				GSM_Serial->print(F("\",\""));
+				GSM_Serial->print(_Secondary);
+				GSM_Serial->print(F("\""));
+				GSM_Serial->write(0x0D);
+				GSM_Serial->write(0x0A);
+
+				// Declare Buffer Object
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_DNS_, 20};
+
+				// Declare Buffer Variable
+				char _Buffer_Variable[_Buffer.Size];
+
+				// Clear Buffer Variable
+				memset(_Buffer_Variable, '\0', _Buffer.Size);
+
+				// Declare Response
+				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+
+				// End Function
+				return(_Buffer.Response == _AT_OK_);
+
+			}
+
+			// DNS Response Cache Function
+			bool CACHEDNS(const bool _Mode) {
+
+				// Clear UART Buffer
+				this->Clear_UART_Buffer();
+
+				// Command Chain Delay (Advice by Telit)
+				delay(_AT_WAIT_DELAY_);
+
+				// Send UART Command
+				GSM_Serial->print(F("AT#CACHEDNS="));
+				GSM_Serial->print(_Mode);
+				GSM_Serial->write(0x0D);
+				GSM_Serial->write(0x0A);
+
+				// Declare Buffer Object
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CACHEDNS_, 20};
+
+				// Declare Buffer Variable
+				char _Buffer_Variable[_Buffer.Size];
+
+				// Clear Buffer Variable
+				memset(_Buffer_Variable, '\0', _Buffer.Size);
+
+				// Declare Response
+				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+
+				// End Function
+				return(_Buffer.Response == _AT_OK_);
 
 			}
 
