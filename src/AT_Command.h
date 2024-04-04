@@ -1832,7 +1832,7 @@
 			}
 
 			// Ping Function
-			bool Ping(const char * _IP, uint16_t _Time) {
+			bool Ping(const char * _IP, uint16_t & _Time) {
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -1864,6 +1864,9 @@
 
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
+
+					// Clear Time
+					_Time = 0;
 
 					// Get Response Time
 					_Time = (uint16_t)this->Handle_Number(_Buffer_Variable, ',', 2, '\r', 2);
@@ -2672,7 +2675,7 @@
 				// \r\nSRING: 1,9\r\n					--> 14 Char
 
 				// Read UART Response
-				while (_Buffer.Response == _AT_TIMEOUT_) {
+				while (!_Buffer.Response) {
 
 					// Read Delay
 					delay(1);

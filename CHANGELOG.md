@@ -12,6 +12,11 @@ All notable changes to this project will be documented in this file. The format 
 
 ---
 
+## [1.9.1]
+
+- Ping function updated.
+- Bug fixes.
+
 ## [1.9.0]
 
 - Ping function updated.
