@@ -25,7 +25,11 @@
 	},
 	"export":
 	{
-		"include": "src"
+		"include":
+		[
+			"src",
+			"examples"
+		]
 	},
 	"examples": "examples/*/*.ino",
 	"community":
