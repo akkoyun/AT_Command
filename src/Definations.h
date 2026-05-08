@@ -1,3 +1,14 @@
+/* *******************************************************************************
+ *  Copyright (C) 2014-2026 Mehmet Gunce Akkoyun Can not be copied and/or
+ *	distributed without the express permission of Mehmet Gunce Akkoyun.
+ *
+ *	Library				: AT_Command
+ *	Version				: 02.00.01
+ *
+ *********************************************************************************/
+
+#pragma once
+
 // Include Arduino Library
 #ifndef Arduino_h
 	#include <Arduino.h>
@@ -5,124 +16,124 @@
 
 // Function Mode Definitions
 // -------------------------
-#define _AT_SET_				    		(bool)true
-#define _AT_GET_				    		(bool)false
+constexpr bool _AT_SET_  = true;
+constexpr bool _AT_GET_  = false;
 
 // Download Mode Definitions
 // -------------------------
-#define _FOTA_GET_				    		(bool)true
-#define _FOTA_FTP_				    		(bool)false
+constexpr bool _FOTA_GET_ = true;
+constexpr bool _FOTA_FTP_ = false;
 
 // Manufacturer Definitions
-// -----------------------
-#define _MODEM_MANUFACTURER_UNKNOWN_		(uint8_t)0
-#define _MODEM_MANUFACTURER_TELIT_			(uint8_t)1
+// ------------------------
+constexpr uint8_t _MODEM_MANUFACTURER_UNKNOWN_ = 0;
+constexpr uint8_t _MODEM_MANUFACTURER_TELIT_   = 1;
 
 // Telit Model Definitions
 // -----------------------
-#define _MODEM_MODEL_UNKNOWN_				(uint8_t)0
-#define _MODEM_MODEL_GE910_QUAD_			(uint8_t)11
-#define _MODEM_MODEL_GE910_QUAD_V3_			(uint8_t)12
-#define _MODEM_MODEL_GE910_GNSS_			(uint8_t)13
-#define _MODEM_MODEL_LE910S1_EA_			(uint8_t)21
-#define _MODEM_MODEL_LE910S1_EAG_			(uint8_t)22
-#define _MODEM_MODEL_LE910R1_EU_			(uint8_t)23
-#define _MODEM_MODEL_LE910C1_EUX_			(uint8_t)24
+constexpr uint8_t _MODEM_MODEL_UNKNOWN_       = 0;
+constexpr uint8_t _MODEM_MODEL_GE910_QUAD_    = 11;
+constexpr uint8_t _MODEM_MODEL_GE910_QUAD_V3_ = 12;
+constexpr uint8_t _MODEM_MODEL_GE910_GNSS_    = 13;
+constexpr uint8_t _MODEM_MODEL_LE910S1_EA_    = 21;
+constexpr uint8_t _MODEM_MODEL_LE910S1_EAG_   = 22;
+constexpr uint8_t _MODEM_MODEL_LE910R1_EU_    = 23;
+constexpr uint8_t _MODEM_MODEL_LE910C1_EUX_   = 24;
 
 // Modem Status Definitions
 // ------------------------
-#define _MODEM_INITIALIZED_					(bool)true
-#define _MODEM_NOT_INITIALIZED_				(bool)false
-#define _MODEM_CONNECTED_					(bool)true
-#define _MODEM_NOT_CONNECTED_				(bool)false
+constexpr bool _MODEM_INITIALIZED_     = true;
+constexpr bool _MODEM_NOT_INITIALIZED_ = false;
+constexpr bool _MODEM_CONNECTED_       = true;
+constexpr bool _MODEM_NOT_CONNECTED_   = false;
 
 // SIM PIN Definitions
 // -------------------
-#define _SIM_UNKNOWN_						(uint8_t)0
-#define _SIM_READY_							(uint8_t)1
-#define _SIM_PIN_							(uint8_t)2
-#define _SIM_PUK_							(uint8_t)3
+constexpr uint8_t _SIM_UNKNOWN_ = 0;
+constexpr uint8_t _SIM_READY_   = 1;
+constexpr uint8_t _SIM_PIN_     = 2;
+constexpr uint8_t _SIM_PUK_     = 3;
 
 // SIM Status Definitions
-// -----------------------
-#define _SIM_NOT_INSERTED_					(bool)false
-#define _SIM_INSERTED_						(bool)true
+// ----------------------
+constexpr bool _SIM_NOT_INSERTED_ = false;
+constexpr bool _SIM_INSERTED_     = true;
 
 // Socket Status Definitions
-// --------------------------
-#define _SOCKET_CLOSED_						(uint8_t)0
-#define _SOCKET_ACTIVE_						(uint8_t)1
-#define _SOCKET_SUSPENDED_					(uint8_t)2
-#define _SOCKET_PENDING_					(uint8_t)3
-#define _SOCKET_LISTENING_					(uint8_t)4
-#define _SOCKET_WAITING_					(uint8_t)5
-#define _SOCKET_PROCESS_					(uint8_t)6
+// -------------------------
+constexpr uint8_t _SOCKET_CLOSED_    = 0;
+constexpr uint8_t _SOCKET_ACTIVE_    = 1;
+constexpr uint8_t _SOCKET_SUSPENDED_ = 2;
+constexpr uint8_t _SOCKET_PENDING_   = 3;
+constexpr uint8_t _SOCKET_LISTENING_ = 4;
+constexpr uint8_t _SOCKET_WAITING_   = 5;
+constexpr uint8_t _SOCKET_PROCESS_   = 6;
 
-// AT Command Output Definitions
+// AT Command Response Definitions
+// --------------------------------
+constexpr uint8_t _AT_TIMEOUT_   = 0;
+constexpr uint8_t _AT_OK_        = 1;
+constexpr uint8_t _AT_ERROR_     = 2;
+constexpr uint8_t _AT_CME_       = 3;
+constexpr uint8_t _AT_SD_PROMPT_ = 4;
+constexpr uint8_t _AT_SRING_     = 5;
+
+// Connection Protocol Definitions
+// --------------------------------
+constexpr uint8_t _AT_TCP_ = 0;
+constexpr uint8_t _AT_UDP_ = 1;
+
+// Connection Mode Definitions
+// ---------------------------
+constexpr uint8_t _CONNECTION_ONLINE_       = 0;
+constexpr uint8_t _CONNECTION_COMMAND_      = 1;
+constexpr uint8_t _CONNECTION_AUTO_CLOSE_   = 0;
+constexpr uint8_t _CONNECTION_MANUAL_CLOSE_ = 255;
+
+// Connection Status Definitions
 // -----------------------------
-#define _AT_TIMEOUT_				    	(uint8_t)0
-#define _AT_OK_			    		    	(uint8_t)1
-#define _AT_ERROR_					    	(uint8_t)2
-#define _AT_CME_					    	(uint8_t)3
-#define _AT_SD_PROMPT_                  	(uint8_t)4
-#define _AT_SRING_                  		(uint8_t)5
+constexpr uint8_t _CONNECTION_UNKNOWN_ = 0;
+constexpr uint8_t _CONNECTION_2G_      = 1;
+constexpr uint8_t _CONNECTION_3G_      = 2;
+constexpr uint8_t _CONNECTION_4G_      = 3;
+constexpr uint8_t _CONNECTION_TDSCDMA_ = 4;
 
-// Define Connection Protocol
-// --------------------------
-#define _AT_TCP_							(uint8_t)0
-#define _AT_UDP_							(uint8_t)1
+// HTTP Method Definitions
+// -----------------------
+constexpr uint8_t _HTTP_RESPONSE_ = 0;
+constexpr uint8_t _HTTP_GET_      = 1;
+constexpr uint8_t _HTTP_POST_     = 2;
+constexpr uint8_t _HTTP_PUT_      = 3;
+constexpr uint8_t _HTTP_DELETE_   = 4;
 
-// Define Connection Mode
-// ----------------------
-#define _CONNECTION_ONLINE_					(uint8_t)0
-#define _CONNECTION_COMMAND_				(uint8_t)1
-#define _CONNECTION_AUTO_CLOSE_				(uint8_t)0
-#define _CONNECTION_MANUAL_CLOSE_			(uint8_t)255
+// HTTP Status Code Definitions
+// ----------------------------
+constexpr uint16_t _HTTP_Unknown_          = 0;
+constexpr uint16_t _HTTP_OK_               = 200;
+constexpr uint16_t _HTTP_Created_          = 201;
+constexpr uint16_t _HTTP_Accepted_         = 202;
+constexpr uint16_t _HTTP_NoContent_        = 204;
+constexpr uint16_t _HTTP_BadRequest_       = 400;
+constexpr uint16_t _HTTP_Unauthorized_     = 401;
+constexpr uint16_t _HTTP_Forbidden_        = 403;
+constexpr uint16_t _HTTP_NotFound_         = 404;
+constexpr uint16_t _HTTP_MethodNotAllowed_ = 405;
+constexpr uint16_t _HTTP_NotAcceptable_    = 406;
+constexpr uint16_t _HTTP_RequestTimeout_   = 408;
 
-// Define Connection Status
-// ------------------------
-#define _CONNECTION_UNKNOWN_				(uint8_t)0
-#define _CONNECTION_2G_						(uint8_t)1
-#define _CONNECTION_3G_						(uint8_t)2
-#define _CONNECTION_4G_						(uint8_t)3
-#define _CONNECTION_TDSCDMA_				(uint8_t)4
-
-// Define HTTP Method
-// ------------------
-#define _HTTP_RESPONSE_			    		(uint8_t)0
-#define _HTTP_GET_				    		(uint8_t)1
-#define _HTTP_POST_				    		(uint8_t)2
-#define _HTTP_PUT_				    		(uint8_t)3
-#define _HTTP_DELETE_			    		(uint8_t)4
-
-// Define HTTP Headers
-// -------------------
-#define _HTTP_Unknown_			    		(uint16_t)0
-#define _HTTP_OK_				    		(uint16_t)200
-#define _HTTP_Created_			    		(uint16_t)201
-#define _HTTP_Accepted_			    		(uint16_t)202
-#define _HTTP_NoContent_		    		(uint16_t)204
-#define _HTTP_BadRequest_		    		(uint16_t)400
-#define _HTTP_Unauthorized_		    		(uint16_t)401
-#define _HTTP_Forbidden_		    		(uint16_t)403
-#define _HTTP_NotFound_			    		(uint16_t)404
-#define _HTTP_MethodNotAllowed_	    		(uint16_t)405
-#define _HTTP_NotAcceptable_	    		(uint16_t)406
-#define _HTTP_RequestTimeout_	    		(uint16_t)408
-
-// Define FOTA Status
-// ------------------
-#define FOTA_Download_Unknown				(uint8_t)0
-#define FOTA_Download_OK					(uint8_t)1
-#define FOTA_Download_TimeOut				(uint8_t)20
-#define FOTA_Download_Size_Error			(uint8_t)21
-#define FOTA_Download_Not_Save				(uint8_t)22
-#define FOTA_Server_Error					(uint8_t)23
-#define FOTA_Download_CME_Error				(uint8_t)24
-#define FOTA_SD_Error						(uint8_t)30
-#define FOTA_FTP_Login_Error				(uint8_t)50
-#define FOTA_FTP_Connect_Error				(uint8_t)51
-#define FOTA_FTP_Config_Error				(uint8_t)52
-#define FOTA_FTP_File_Not_Found				(uint8_t)53
-#define FOTA_FTP_File_Size_Error			(uint8_t)54
-#define FOTA_Download_MD5_Error				(uint8_t)99
+// FOTA Status Definitions
+// -----------------------
+constexpr uint8_t FOTA_Download_Unknown    = 0;
+constexpr uint8_t FOTA_Download_OK         = 1;
+constexpr uint8_t FOTA_Download_TimeOut    = 20;
+constexpr uint8_t FOTA_Download_Size_Error = 21;
+constexpr uint8_t FOTA_Download_Not_Save   = 22;
+constexpr uint8_t FOTA_Server_Error        = 23;
+constexpr uint8_t FOTA_Download_CME_Error  = 24;
+constexpr uint8_t FOTA_SD_Error            = 30;
+constexpr uint8_t FOTA_FTP_Login_Error     = 50;
+constexpr uint8_t FOTA_FTP_Connect_Error   = 51;
+constexpr uint8_t FOTA_FTP_Config_Error    = 52;
+constexpr uint8_t FOTA_FTP_File_Not_Found  = 53;
+constexpr uint8_t FOTA_FTP_File_Size_Error = 54;
+constexpr uint8_t FOTA_Download_MD5_Error  = 99;

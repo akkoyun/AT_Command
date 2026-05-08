@@ -1,47 +1,25 @@
 # Contributing to AT_Command Library
 
-First off, thank you for considering contributing to the AT_Command Library. It's people like you that make the AT_Command Library such a great tool.
+Thank you for considering contributing to the AT_Command Library.
 
 ## Ways to Contribute
 
-There are many ways to contribute to the project, from writing tutorials or blog posts, improving the documentation, submitting bug reports and feature requests, or writing code which can be incorporated into the library itself. This library is a community project, and we are always open to people who want to use it or contribute to it. You don't need to be a software engineer to contribute to the library. We welcome any kind of help, be it bug reports, documentation, or feature requests.
+- **Bug reports** — open a GitHub issue with reproduction steps, expected vs actual behaviour.
+- **Feature requests** — open a GitHub issue describing the use case and benefit.
+- **Pull requests** — fork the repo, make your changes on a new branch, and open a PR against `main`.
+- **Documentation** — typo fixes, clarifications, and new examples are always welcome.
 
-### Reporting Bugs
+## Pull Request Guidelines
 
-Bugs are tracked as GitHub issues. To report a bug, please create an issue on our GitHub repository and include as many details as possible about the bug, including steps to reproduce, the expected outcome, and the actual outcome.
+1. Branch from `main` and keep changes focused.
+2. Match the existing code style (`constexpr` constants, `&&`/`||` operators, no VLAs, no unsafe C string functions).
+3. Update `CHANGELOG.md` under `[Unreleased]` with a brief description of the change.
+4. If you add a new AT command function, add a corresponding entry to `keywords.txt`.
 
-### Feature Requests
+## Reporting Bugs
 
-Feature requests are also tracked as GitHub issues. Before you submit a feature request, please check if it's already been requested. If it's a new request, provide as much detail as possible about the feature and why it would be useful.
-
-### Pull Requests
-
-Pull requests are the best way to propose changes to the codebase. Here's how to do it:
-
-1. Fork the repo and create your branch from `master`.
-2. If you've added code, add tests.
-3. If you've changed APIs, update the documentation.
-4. Ensure your code passes the existing tests.
-5. Issue your pull request!
-
-### Documentation
-
-We always need help improving our documentation, whether it's correcting typos, clarifying existing content, or writing new content.
-
-## Code of Conduct
-
-This project and everyone participating in it is governed by the [AT_Command Library Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
-
-## Getting Started
-
-Before you begin, ensure you have the latest version of [git](https://git-scm.com/) installed. Check out the project's issues for things that need attention.
-
-## Questions?
-
-If you have any questions, please feel free to contact the project maintainers.
-
-Thank you for your interest in contributing to the AT_Command Library!
-
-## License
-
-By contributing to the AT_Command Library, you agree that your contributions will be licensed under its MIT license.
+Please include:
+- Board and MCU (e.g. Arduino Mega, ATmega2560)
+- Modem model and firmware version
+- Minimal code that reproduces the issue
+- Observed vs expected output

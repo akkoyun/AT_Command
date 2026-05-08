@@ -1,208 +1,222 @@
+/* *******************************************************************************
+ *  Copyright (C) 2014-2026 Mehmet Gunce Akkoyun Can not be copied and/or
+ *	distributed without the express permission of Mehmet Gunce Akkoyun.
+ *
+ *	Library				: AT_Command
+ *	Version				: 02.00.01
+ *
+ *********************************************************************************/
+
+#pragma once
+
 // Include Arduino Library
 #ifndef Arduino_h
 	#include <Arduino.h>
 #endif
 
-// Define Cloud Parameters
-// -----------------------
+// Cloud Server Parameters (string literals — keep as #define for user override)
+// ------------------------------------------------------------------------------
 #ifndef _PostMan_Server_
-	#define _PostMan_Server_ 				"165.227.154.147"
+	#define _PostMan_Server_ "165.227.154.147"
 #endif
 #ifndef _PostMan_EndPoint_
-	#define _PostMan_EndPoint_ 				"/"
-#endif
-#ifndef _PostMan_Port_
-	#define _PostMan_Port_ 					(uint8_t)80
+	#define _PostMan_EndPoint_ "/"
 #endif
 
-// Socket ID Definitions
-// ---------------------
-#ifndef _PostMan_CID_
-	#define _PostMan_CID_					(uint8_t)1
-#endif
-
-// Configuration Definitions
+// Numeric Config Parameters
 // -------------------------
+#ifndef _PostMan_Port_
+	constexpr uint8_t _PostMan_Port_ = 80;
+#endif
+#ifndef _PostMan_CID_
+	constexpr uint8_t _PostMan_CID_ = 1;
+#endif
 #ifndef _AT_WAIT_DELAY_
-	#define _AT_WAIT_DELAY_					(uint8_t)20
+	constexpr uint8_t _AT_WAIT_DELAY_ = 20;
+#endif
+#ifndef _AT_UART_READ_DELAY_
+	constexpr uint8_t _AT_UART_READ_DELAY_ = 5;
+#endif
+#ifndef _AT_SD_PROMPT_DELAY_
+	constexpr uint8_t _AT_SD_PROMPT_DELAY_ = 10;
 #endif
 
-// Define Functon Timeout
-// ----------------------
+// Function Timeout Definitions (ms) — override before including this header
+// --------------------------------------------------------------------------
 #ifndef _TIMEOUT_AT_
-	#define _TIMEOUT_AT_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_AT_ = 1000;
 #endif
 #ifndef _TIMEOUT_FCLASS_
-	#define _TIMEOUT_FCLASS_			   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_FCLASS_ = 1000;
 #endif
 #ifndef _TIMEOUT_CGMI_
-	#define _TIMEOUT_CGMI_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_CGMI_ = 1000;
 #endif
 #ifndef _TIMEOUT_CGMM_
-	#define _TIMEOUT_CGMM_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_CGMM_ = 1000;
 #endif
 #ifndef _TIMEOUT_SWPKGV_
-	#define _TIMEOUT_SWPKGV_			   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_SWPKGV_ = 1000;
 #endif
 #ifndef _TIMEOUT_CGSN_
-	#define _TIMEOUT_CGSN_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_CGSN_ = 1000;
 #endif
 #ifndef _TIMEOUT_CFUN_
-	#define _TIMEOUT_CFUN_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_CFUN_ = 1000;
 #endif
 #ifndef _TIMEOUT_CMEE_
-	#define _TIMEOUT_CMEE_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_CMEE_ = 1000;
 #endif
 #ifndef _TIMEOUT_CEER_
-	#define _TIMEOUT_CEER_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_CEER_ = 1000;
 #endif
 #ifndef _TIMEOUT_ATE_
-	#define _TIMEOUT_ATE_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_ATE_ = 1000;
 #endif
 #ifndef _TIMEOUT_K_
-	#define _TIMEOUT_K_	    			   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_K_ = 1000;
 #endif
 #ifndef _TIMEOUT_CPIN_
-	#define _TIMEOUT_CPIN_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_CPIN_ = 1000;
 #endif
 #ifndef _TIMEOUT_CCID_
-	#define _TIMEOUT_CCID_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_CCID_ = 1000;
 #endif
 #ifndef _TIMEOUT_SIMDET_
-	#define _TIMEOUT_SIMDET_			   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_SIMDET_ = 1000;
 #endif
 #ifndef _TIMEOUT_GPIO_
-	#define _TIMEOUT_GPIO_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_GPIO_ = 1000;
 #endif
 #ifndef _TIMEOUT_SLED_
-	#define _TIMEOUT_SLED_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_SLED_ = 1000;
 #endif
 #ifndef _TIMEOUT_SLEDSAV_
-	#define _TIMEOUT_SLEDSAV_			   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_SLEDSAV_ = 1000;
 #endif
 #ifndef _TIMEOUT_E2SLRI_
-	#define _TIMEOUT_E2SLRI_			   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_E2SLRI_ = 1000;
 #endif
 #ifndef _TIMEOUT_CREG_
-	#define _TIMEOUT_CREG_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_CREG_ = 1000;
 #endif
 #ifndef _TIMEOUT_CGDCONT_
-	#define _TIMEOUT_CGDCONT_			   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_CGDCONT_ = 1000;
 #endif
 #ifndef _TIMEOUT_SGACT_
-	#define _TIMEOUT_SGACT_				   	(uint16_t)60000
+	constexpr uint16_t _TIMEOUT_SGACT_ = 60000;
 #endif
 #ifndef _TIMEOUT_WS46_
-	#define _TIMEOUT_WS46_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_WS46_ = 1000;
 #endif
 #ifndef _TIMEOUT_RFSTS_
-	#define _TIMEOUT_RFSTS_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_RFSTS_ = 1000;
 #endif
 #ifndef _TIMEOUT_MONI_
-	#define _TIMEOUT_MONI_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_MONI_ = 1000;
 #endif
 #ifndef _TIMEOUT_SCFG_
-	#define _TIMEOUT_SCFG_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_SCFG_ = 1000;
 #endif
 #ifndef _TIMEOUT_SCFGEXT_
-	#define _TIMEOUT_SCFGEXT_			   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_SCFGEXT_ = 1000;
 #endif
 #ifndef _TIMEOUT_SCFGEXT2_
-	#define _TIMEOUT_SCFGEXT2_			   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_SCFGEXT2_ = 1000;
 #endif
 #ifndef _TIMEOUT_SCFGEXT3_
-	#define _TIMEOUT_SCFGEXT3_			   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_SCFGEXT3_ = 1000;
 #endif
 #ifndef _TIMEOUT_FRWL_
-	#define _TIMEOUT_FRWL_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_FRWL_ = 1000;
 #endif
 #ifndef _TIMEOUT_ICMP_
-	#define _TIMEOUT_ICMP_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_ICMP_ = 1000;
 #endif
 #ifndef _TIMEOUT_Ping_
-	#define _TIMEOUT_Ping_				   	(uint16_t)6000
+	constexpr uint16_t _TIMEOUT_Ping_ = 6000;
 #endif
 #ifndef _TIMEOUT_CCLK_
-	#define _TIMEOUT_CCLK_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_CCLK_ = 1000;
 #endif
 #ifndef _TIMEOUT_CTZU_
-	#define _TIMEOUT_CTZU_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_CTZU_ = 1000;
 #endif
 #ifndef _TIMEOUT_NITZ_
-	#define _TIMEOUT_NITZ_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_NITZ_ = 1000;
 #endif
 #ifndef _TIMEOUT_CCLKMODE_
-	#define _TIMEOUT_CCLKMODE_			   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_CCLKMODE_ = 1000;
 #endif
 #ifndef _TIMEOUT_SD_
-	#define _TIMEOUT_SD_				   	(uint16_t)65000
+	constexpr uint16_t _TIMEOUT_SD_ = 65000;
 #endif
 #ifndef _TIMEOUT_SH_
-	#define _TIMEOUT_SH_				   	(uint16_t)5000
+	constexpr uint16_t _TIMEOUT_SH_ = 5000;
 #endif
 #ifndef _TIMEOUT_TCPMAXWIN_
-	#define _TIMEOUT_TCPMAXWIN_			   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_TCPMAXWIN_ = 1000;
 #endif
 #ifndef _TIMEOUT_SL_
-	#define _TIMEOUT_SL_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_SL_ = 1000;
 #endif
 #ifndef _TIMEOUT_SA_
-	#define _TIMEOUT_SA_				   	(uint16_t)15000
+	constexpr uint16_t _TIMEOUT_SA_ = 15000;
 #endif
 #ifndef _TIMEOUT_SS_
-	#define _TIMEOUT_SS_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_SS_ = 1000;
 #endif
 #ifndef _TIMEOUT_SO_
-	#define _TIMEOUT_SO_				   	(uint16_t)5000
+	constexpr uint16_t _TIMEOUT_SO_ = 5000;
 #endif
 #ifndef _TIMEOUT_SKTTO_
-	#define _TIMEOUT_SKTTO_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_SKTTO_ = 1000;
 #endif
 #ifndef _TIMEOUT_SI_
-	#define _TIMEOUT_SI_				   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_SI_ = 1000;
 #endif
 #ifndef _TIMEOUT_SSEND_
-	#define _TIMEOUT_SSEND_				   	(uint16_t)2000
+	constexpr uint16_t _TIMEOUT_SSEND_ = 2000;
 #endif
 #ifndef _TIMEOUT_SRECV_
-	#define _TIMEOUT_SRECV_				   	(uint16_t)5000
+	constexpr uint16_t _TIMEOUT_SRECV_ = 5000;
 #endif
 #ifndef _TIMEOUT_DNS_
-	#define _TIMEOUT_DNS_			  	 	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_DNS_ = 1000;
 #endif
 #ifndef _TIMEOUT_CACHEDNS_
-	#define _TIMEOUT_CACHEDNS_			   	(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_CACHEDNS_ = 1000;
 #endif
 #ifndef _TIMEOUT_FTPCLOSE_
-	#define _TIMEOUT_FTPCLOSE_				(uint16_t)65000
+	constexpr uint16_t _TIMEOUT_FTPCLOSE_ = 65000;
 #endif
 #ifndef _TIMEOUT_FTPCWD_
-	#define _TIMEOUT_FTPCWD_				(uint16_t)65000
+	constexpr uint16_t _TIMEOUT_FTPCWD_ = 65000;
 #endif
 #ifndef _TIMEOUT_FTPFSIZE_
-	#define _TIMEOUT_FTPFSIZE_				(uint16_t)65000
+	constexpr uint16_t _TIMEOUT_FTPFSIZE_ = 65000;
 #endif
 #ifndef _TIMEOUT_FTPGETPKT_
-	#define _TIMEOUT_FTPGETPKT_				(uint16_t)65000
+	constexpr uint16_t _TIMEOUT_FTPGETPKT_ = 65000;
 #endif
 #ifndef _TIMEOUT_FTPOPEN_
-	#define _TIMEOUT_FTPOPEN_				(uint16_t)65000
+	constexpr uint16_t _TIMEOUT_FTPOPEN_ = 65000;
 #endif
 #ifndef _TIMEOUT_FTPRECV_
-	#define _TIMEOUT_FTPRECV_				(uint16_t)65000
+	constexpr uint16_t _TIMEOUT_FTPRECV_ = 65000;
 #endif
 #ifndef _TIMEOUT_FTPTO_
-	#define _TIMEOUT_FTPTO_					(uint16_t)65000
+	constexpr uint16_t _TIMEOUT_FTPTO_ = 65000;
 #endif
 #ifndef _TIMEOUT_FTPTYPE_
-	#define _TIMEOUT_FTPTYPE_				(uint16_t)65000
+	constexpr uint16_t _TIMEOUT_FTPTYPE_ = 65000;
 #endif
 #ifndef _TIMEOUT_Z_
-	#define _TIMEOUT_Z_						(uint16_t)5000
+	constexpr uint16_t _TIMEOUT_Z_ = 5000;
 #endif
 #ifndef _TIMEOUT_SHDN_
-	#define _TIMEOUT_SHDN_					(uint16_t)5000
+	constexpr uint16_t _TIMEOUT_SHDN_ = 5000;
 #endif
 #ifndef _TIMEOUT_CSQ_
-	#define _TIMEOUT_CSQ_					(uint16_t)1000
+	constexpr uint16_t _TIMEOUT_CSQ_ = 1000;
 #endif

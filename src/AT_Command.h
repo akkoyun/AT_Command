@@ -1,14 +1,14 @@
 /* *******************************************************************************
- *  Copyright (C) 2014-2022 Mehmet Gunce Akkoyun Can not be copied and/or
+ *  Copyright (C) 2014-2026 Mehmet Gunce Akkoyun Can not be copied and/or
  *	distributed without the express permission of Mehmet Gunce Akkoyun.
  *
  *	Library				: AT_Command
  *	Code Developer		: Mehmet Gunce Akkoyun (akkoyun@me.com)
+ *	Version				: 02.00.01
  *
  *********************************************************************************/
 
-#ifndef __AT_Command__
-#define __AT_Command__
+#pragma once
 
 	// Include Arduino Library
 	#ifndef Arduino_h
@@ -20,18 +20,19 @@
 	#include "Config.h"
 
 	// Telit LE910C1_EUX Class
+	#define _LE910C1_EUX_
 	class LE910C1_EUX {
-
-		// Define Modem Name
-		#ifndef _LE910C1_EUX_
-			#define _LE910C1_EUX_
-		#endif
 
 		// Private Context
 		private:
 
 			// GSM Serial Stream Definition
 			Stream * GSM_Serial;
+
+			// Shared IO buffer — single allocation, reused by every AT command function.
+			// Moves all large per-call stack allocations to the object instance instead.
+			static constexpr uint16_t _IO_Buffer_Size = 1024;
+			char _IO_Buffer[_IO_Buffer_Size];
 
 			// Serial Buffer Variable Structure Definition
 			struct Serial_Buffer {
@@ -59,14 +60,16 @@
 			}
 
 			// Read Serial Buffer Function
-			bool Read_UART_Buffer(Serial_Buffer * _Buffer, char * _Buffer_Variable) {
+			bool Read_UART_Buffer(Serial_Buffer * _Buffer) {
 
 				// Response Wait Delay
-				delay(5);
+				delay(_AT_UART_READ_DELAY_);
 
-				// Set Read Order
+				// Reset state and clear shared buffer
 				_Buffer->Read_Order = 0;
 				_Buffer->Response = _AT_TIMEOUT_;
+				const uint16_t _Limit = (_Buffer->Size < _IO_Buffer_Size) ? _Buffer->Size : _IO_Buffer_Size;
+				memset(_IO_Buffer, '\0', _Limit);
 
 				// Read Current Time
 				const uint32_t _Current_Time = millis();
@@ -75,18 +78,24 @@
 				while (!_Buffer->Response) {
 
 					// Read Serial Char
-					_Buffer_Variable[_Buffer->Read_Order] = GSM_Serial->read();
+					_IO_Buffer[_Buffer->Read_Order] = GSM_Serial->read();
 
 					// Control for Response
-					if (this->Find(_AT_OK_, _Buffer_Variable, _Buffer->Read_Order)) _Buffer->Response = _AT_OK_;
-					if (this->Find(_AT_ERROR_, _Buffer_Variable, _Buffer->Read_Order)) _Buffer->Response = _AT_ERROR_;
-					if (this->Find(_AT_CME_, _Buffer_Variable, _Buffer->Read_Order)) _Buffer->Response = _AT_CME_;
-					if (this->Find(_AT_SD_PROMPT_, _Buffer_Variable, _Buffer->Read_Order)) _Buffer->Response = _AT_SD_PROMPT_;
+					if (this->Find(_AT_OK_,        _IO_Buffer, _Buffer->Read_Order)) _Buffer->Response = _AT_OK_;
+					if (this->Find(_AT_ERROR_,     _IO_Buffer, _Buffer->Read_Order)) _Buffer->Response = _AT_ERROR_;
+					if (this->Find(_AT_CME_,       _IO_Buffer, _Buffer->Read_Order)) _Buffer->Response = _AT_CME_;
+					if (this->Find(_AT_SD_PROMPT_, _IO_Buffer, _Buffer->Read_Order)) _Buffer->Response = _AT_SD_PROMPT_;
 
-					// Increase Read Order
-					if (isAscii(_Buffer_Variable[_Buffer->Read_Order])) _Buffer->Read_Order++;
-					if (_Buffer_Variable[_Buffer->Read_Order] == '\r') _Buffer->Read_Order++;
-					if (_Buffer_Variable[_Buffer->Read_Order] == '\n') _Buffer->Read_Order++;
+					// Advance position only while no response detected
+					// (preserves Read_Order at the last matched byte index)
+					if (!_Buffer->Response) {
+						if (isAscii(_IO_Buffer[_Buffer->Read_Order])) _Buffer->Read_Order++;
+						if (_IO_Buffer[_Buffer->Read_Order] == '\r') _Buffer->Read_Order++;
+						if (_IO_Buffer[_Buffer->Read_Order] == '\n') _Buffer->Read_Order++;
+
+						// Prevent buffer overflow
+						if (_Buffer->Read_Order >= _Limit - 1) break;
+					}
 
 					// Handle for timeout
 					if (millis() - _Current_Time >= _Buffer->Time_Out) break;
@@ -94,10 +103,7 @@
 				}
 
 				// Control for Response
-				if (_Buffer->Response != _AT_TIMEOUT_) return(true);
-
-				// End Function
-				return(false);
+				return (_Buffer->Response != _AT_TIMEOUT_);
 
 			}
 
@@ -105,59 +111,55 @@
 			bool Find(const uint8_t _Type, const char * _Buffer, uint16_t _Size) {
 
 				// Select Find Type
-				if (_Type == _AT_OK_ and _Size > 4) {
+				if (_Type == _AT_OK_ && _Size > 4) {
 
 					// \r\nOK\r\n
-					// Control for <\r\nOK\r\n> Response
 					if (
-						(_Buffer[_Size - 5] == 13) && 	// \r
-						(_Buffer[_Size - 4] == 10) && 	// \n
-						(_Buffer[_Size - 3] == 79) && 	// O
-						(_Buffer[_Size - 2] == 75) && 	// K
-						(_Buffer[_Size - 1] == 13) && 	// \r
-						(_Buffer[_Size - 0] == 10)		// \n
+						(_Buffer[_Size - 5] == '\r') &&
+						(_Buffer[_Size - 4] == '\n') &&
+						(_Buffer[_Size - 3] == 'O' ) &&
+						(_Buffer[_Size - 2] == 'K' ) &&
+						(_Buffer[_Size - 1] == '\r') &&
+						(_Buffer[_Size    ] == '\n')
 					) return(true);
 
-				} else if (_Type == _AT_ERROR_ and _Size > 7) {
+				} else if (_Type == _AT_ERROR_ && _Size > 7) {
 
 					// \r\nERROR\r\n
-					// Control for <\r\nERROR\r\n> Response
 					if (
-						(_Buffer[_Size - 8] == 13) && 	// \r
-						(_Buffer[_Size - 7] == 10) && 	// \n
-						(_Buffer[_Size - 6] == 69) && 	// E
-						(_Buffer[_Size - 5] == 82) && 	// R
-						(_Buffer[_Size - 4] == 82) && 	// R
-						(_Buffer[_Size - 3] == 79) && 	// O
-						(_Buffer[_Size - 2] == 82) && 	// R
-						(_Buffer[_Size - 1] == 13) && 	// \r
-						(_Buffer[_Size - 0] == 10)		// \n
+						(_Buffer[_Size - 8] == '\r') &&
+						(_Buffer[_Size - 7] == '\n') &&
+						(_Buffer[_Size - 6] == 'E' ) &&
+						(_Buffer[_Size - 5] == 'R' ) &&
+						(_Buffer[_Size - 4] == 'R' ) &&
+						(_Buffer[_Size - 3] == 'O' ) &&
+						(_Buffer[_Size - 2] == 'R' ) &&
+						(_Buffer[_Size - 1] == '\r') &&
+						(_Buffer[_Size    ] == '\n')
 					) return(true);
 
-				} else if (_Type == _AT_CME_ and _Size > 15) {
+				} else if (_Type == _AT_CME_ && _Size > 15) {
 
-					// \r\n+CME ERROR: 614\r\n
-					// Control for <\r\n+CME> Response
+					// \r\n+CME ERROR: nnn\r\n
 					if (
-						(_Buffer[_Size - 18] == 13) && 	// \r
-						(_Buffer[_Size - 17] == 10) && 	// \r
-						(_Buffer[_Size - 16] == 43) && 	// +
-						(_Buffer[_Size - 15] == 67) &&	// C 
-						(_Buffer[_Size - 14] == 77) && 	// M
-						(_Buffer[_Size - 13] == 69) && 	// E
-						(_Buffer[_Size - 1] == 13) && 	// \r
-						(_Buffer[_Size - 0] == 10)		// \r
+						(_Buffer[_Size - 18] == '\r') &&
+						(_Buffer[_Size - 17] == '\n') &&
+						(_Buffer[_Size - 16] == '+' ) &&
+						(_Buffer[_Size - 15] == 'C' ) &&
+						(_Buffer[_Size - 14] == 'M' ) &&
+						(_Buffer[_Size - 13] == 'E' ) &&
+						(_Buffer[_Size - 1 ] == '\r') &&
+						(_Buffer[_Size     ] == '\n')
 					) return(true);
 
-				} else if (_Type == _AT_SD_PROMPT_ and _Size > 2) {
+				} else if (_Type == _AT_SD_PROMPT_ && _Size > 2) {
 
-					// \r\n> 
-					// Control for <\r\n> > Response
+					// \r\n> (space)
 					if (
-						(_Buffer[_Size - 3] == 13) && 
-						(_Buffer[_Size - 2] == 10) && 
-						(_Buffer[_Size - 1] == 62) && 
-						(_Buffer[_Size - 0] == 32)
+						(_Buffer[_Size - 3] == '\r') &&
+						(_Buffer[_Size - 2] == '\n') &&
+						(_Buffer[_Size - 1] == '>' ) &&
+						(_Buffer[_Size    ] == ' ' )
 					) return(true);
 
 				} 
@@ -170,112 +172,66 @@
 			// Get Parsed Number Function
 			uint32_t Handle_Number(const char * _Buffer, const char _Start_Char, const uint8_t _Start_Times, const char _End_Char, const uint8_t _End_Times) {
 
-				// Handle Start Position
 				uint16_t _Start = this->Find_Char(_Buffer, _Start_Char, _Start_Times);
+				uint16_t _End   = this->Find_Char(_Buffer, _End_Char,   _End_Times);
 
-				// Handle End Position
-				uint16_t _End = this->Find_Char(_Buffer, _End_Char, _End_Times);
-
-				// Handle Size
+				if (_Start == UINT16_MAX || _End == UINT16_MAX || _End <= _Start) return 0;
 				uint16_t _Size = _End - _Start - 1;
+				if (_Size == 0 || _Size > 31) return 0;
 
-				// Declare Buffer
-				char _Temp_Buffer[_Size];
-
-				// Clear Buffer
-				memset(_Temp_Buffer, '\0', _Size);
-
-				// Copy Buffer
+				char _Temp_Buffer[32];
+				memset(_Temp_Buffer, '\0', 32);
 				memcpy(_Temp_Buffer, &_Buffer[_Start + 1], _Size);
 
-				// Return Parsed Number
-				return(atoi(_Temp_Buffer));
+				return (uint32_t)strtoul(_Temp_Buffer, NULL, 10);
 
 			}
 
 			// Get Parsed HEX Function
 			uint32_t Handle_HEX(const char * _Buffer, const char _Start_Char, const uint8_t _Start_Times, const char _End_Char, const uint8_t _End_Times) {
 
-				// Handle Start Position
 				uint16_t _Start = this->Find_Char(_Buffer, _Start_Char, _Start_Times);
+				uint16_t _End   = this->Find_Char(_Buffer, _End_Char,   _End_Times);
 
-				// Handle End Position
-				uint16_t _End = this->Find_Char(_Buffer, _End_Char, _End_Times);
-
-				// Handle Size
+				if (_Start == UINT16_MAX || _End == UINT16_MAX || _End <= _Start) return 0;
 				uint16_t _Size = _End - _Start - 1;
+				if (_Size == 0 || _Size > 31) return 0;
 
-				// Declare Buffer
-				char _Temp_Buffer[_Size];
-
-				// Clear Buffer
-				memset(_Temp_Buffer, '\0', _Size);
-
-				// Copy Buffer
+				char _Temp_Buffer[32];
+				memset(_Temp_Buffer, '\0', 32);
 				memcpy(_Temp_Buffer, &_Buffer[_Start + 1], _Size);
 
-				// Return Parsed Number
-				return(strtol(_Temp_Buffer, NULL, 16));
+				return (uint32_t)strtoul(_Temp_Buffer, NULL, 16);
 
 			}
 
-			// ASCII Find Function
+			// ASCII Find Function — returns UINT16_MAX if not found
 			uint16_t Find_Char(const char * _Buffer, const char _Char, const uint8_t _Count) {
 
-				// Declare Counter
 				uint16_t _Counter = 0;
 
-				// Find Char in Buffer
 				for (uint16_t i = 0; _Buffer[i] != '\0'; ++i) {
 
-					// Control for Char
 					if (_Buffer[i] == _Char) {
-
-						// Increase Counter
 						_Counter++;
-
-						// Control for Counter
-						if (_Counter == _Count) return(i);
-
+						if (_Counter == _Count) return i;
 					}
 
 				}
 
-				// End Function
-				return(0);
+				return UINT16_MAX;
 
 			}
 
-			// RSSI to Signal Quality Function
+			// RSSI to Signal Quality Function (returns 0 for invalid/unknown)
 			uint8_t RSSI_to_Signal_Quality(const int8_t _RSSI) {
 
-				// Handle for RSSI
-				if (_RSSI >= -65) {
-
-					// Return Signal Quality
-					return 5;
-
-				} else if (_RSSI >= -75) {
-
-					// Return Signal Quality
-					return 4;
-
-				} else if (_RSSI >= -85) {
-
-					// Return Signal Quality
-					return 3;
-
-				} else if (_RSSI >= -95) {
-
-					// Return Signal Quality
-					return 2;
-
-				} else {
-
-					// Return Signal Quality
-					return 1;
-
-				}
+				if (_RSSI >= 0)  return 0;  // invalid / not known
+				if (_RSSI >= -65) return 5;
+				if (_RSSI >= -75) return 4;
+				if (_RSSI >= -85) return 3;
+				if (_RSSI >= -95) return 2;
+				return 1;
 
 			}
 
@@ -302,14 +258,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_AT_, 11};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -320,7 +269,7 @@
 			bool FCLASS(const uint8_t _FCLASS = 0) {
 
 				// Control for Parameter
-				if (_FCLASS != 0 and _FCLASS != 8) return(false);
+				if (_FCLASS != 0 && _FCLASS != 8) return(false);
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -337,14 +286,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FCLASS_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -368,14 +310,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CGMI_, 35};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Set No Manufacturer
 				_Manufacturer = _MODEM_MANUFACTURER_UNKNOWN_;
@@ -393,7 +328,7 @@
 					memset(_Manufacturer_Name, '\0', 10);
 
 					// Handle Manufacturer Name
-					sscanf(_Buffer_Variable, "\r\n%9s\r\n\r\nOK\r\n", _Manufacturer_Name);
+					if (sscanf(_IO_Buffer, "\r\n%9s\r\n\r\nOK\r\n", _Manufacturer_Name) != 1) return false;
 
 					// Control for Manufacturer Name
 					if (strstr(_Manufacturer_Name, "Telit") != NULL) {
@@ -430,14 +365,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CGMM_, 35};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Get Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Set No Model
 				_Model = _MODEM_MODEL_UNKNOWN_;
@@ -451,41 +379,18 @@
 					// Clear Variable
 					memset(_Model_Name, '\0', 15);
 
-					// Get Model Name				
-					sscanf(_Buffer_Variable, "\r\n%14s\r\n\r\nOK\r\n", _Model_Name);
+					// Get Model Name
+					if (sscanf(_IO_Buffer, "\r\n%14s\r\n\r\nOK\r\n", _Model_Name) != 1) return false;
 
-					// Control for Model Name
-					if (strstr(_Model_Name, "GE910-QUAD") != NULL) {
-
-						// Set Model
-						_Model = _MODEM_MODEL_GE910_QUAD_;
-
-					} else if (strstr(_Model_Name, "GE910-QUAD-V3") != NULL) {
-
-						// Set Model
-						_Model = _MODEM_MODEL_GE910_QUAD_V3_;
-
-					} else if (strstr(_Model_Name, "LE910S1-EA") != NULL) {
-
-						// Set Model
-						_Model = _MODEM_MODEL_LE910S1_EA_;
-
-					} else if (strstr(_Model_Name, "LE910R1-EU") != NULL) {
-
-						// Set Model
-						_Model = _MODEM_MODEL_LE910R1_EU_;
-
-					} else if (strstr(_Model_Name, "LE910C1-EUX") != NULL) {
-
-						// Set Model
-						_Model = _MODEM_MODEL_LE910C1_EUX_;
-
-					} else {
-
-						// Set Model
-						_Model = _MODEM_MODEL_UNKNOWN_;
-
-					}
+					// Check longer names first to avoid substring false-matches
+					if      (strstr(_Model_Name, "GE910-QUAD-V3") != NULL) _Model = _MODEM_MODEL_GE910_QUAD_V3_;
+					else if (strstr(_Model_Name, "GE910-GNSS")    != NULL) _Model = _MODEM_MODEL_GE910_GNSS_;
+					else if (strstr(_Model_Name, "GE910-QUAD")    != NULL) _Model = _MODEM_MODEL_GE910_QUAD_;
+					else if (strstr(_Model_Name, "LE910S1-EAG")   != NULL) _Model = _MODEM_MODEL_LE910S1_EAG_;
+					else if (strstr(_Model_Name, "LE910S1-EA")    != NULL) _Model = _MODEM_MODEL_LE910S1_EA_;
+					else if (strstr(_Model_Name, "LE910R1-EU")    != NULL) _Model = _MODEM_MODEL_LE910R1_EU_;
+					else if (strstr(_Model_Name, "LE910C1-EUX")   != NULL) _Model = _MODEM_MODEL_LE910C1_EUX_;
+					else                                                    _Model = _MODEM_MODEL_UNKNOWN_;
 
 					// Return Response
 					if (_Model != _MODEM_MODEL_UNKNOWN_) return(true);
@@ -499,6 +404,16 @@
 
 			// Get Firmware Function
 			bool SWPKGV(char * _Firmware) {
+
+				/**
+				 * @brief Get Firmware Version of the Modem Function
+				 * @author Mehmet Günce Akkoyun
+				 * @version 1.0.0
+				 * 
+				 * --> AT#SWPKGV\r\n [11]
+				 * <-- \r\n25.30.226-P0F.225200\r\nM0F.223006\r\nP0F.225200\r\nA0F.223006\r\n\r\nOK\r\n [66]
+				 * 
+				 */
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -514,26 +429,16 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SWPKGV_, 70};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
-
-					// AT#SWPKGV\r\n
-					// \r\n25.30.226-P0F.225200\r\nM0F.223006\r\nP0F.225200\r\nA0F.223006\r\n\r\nOK\r\n
 
 					// Clear Variable
 					memset(_Firmware, '\0', 15);
 
 					// Handle Firmware
-					strncpy(_Firmware, &_Buffer_Variable[2], 9);
+					strncpy(_Firmware, &_IO_Buffer[2], 9);
 
 					// End Function
 					return (true);
@@ -547,6 +452,16 @@
 
 			// Get IMEI Function
 			bool CGSN(char * _IMEI) {
+
+				/**
+				 * @brief Get IMEI Number of the Modem Function
+				 * @author Mehmet Günce Akkoyun
+				 * @version 1.0.0
+				 * 
+				 * --> AT+CGSN=1\r\n [11]
+				 * <-- \r\n+CGSN: 354485417617003\r\n\r\nOK\r\n [32]
+				 * 
+				 */
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -562,20 +477,10 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CGSN_, 35};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
-
-					// AT+CGSN=1\r\n
-					// \r\n+CGSN: 354485417617003\r\n\r\nOK\r\n
 
 					// Clear Buffer Variable
 					memset(_IMEI, '\0', 17);
@@ -584,10 +489,10 @@
 					for (uint8_t i = 0; i < _Buffer.Size; i++) {
 
 						// Control for Numeric
-						if (isdigit(_Buffer_Variable[i])) {
+						if (isdigit(_IO_Buffer[i])) {
 
 							// Set IMEI
-							_IMEI[_Buffer.Data_Order++] = _Buffer_Variable[i];
+							_IMEI[_Buffer.Data_Order++] = _IO_Buffer[i];
 
 						}
 
@@ -618,17 +523,10 @@
 				GSM_Serial->write(0x0D);
 				GSM_Serial->write(0x0A);
 
-				// Declare Buffer Obj00204063ect
+				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CFUN_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				return (_Buffer.Response == _AT_OK_);
@@ -639,7 +537,7 @@
 			bool CMEE(const uint8_t _CMEE = 1) {
 
 				// Control for Parameter
-				if (_CMEE != 0 and _CMEE != 1 and _CMEE != 2) return(false);
+				if (_CMEE != 0 && _CMEE != 1 && _CMEE != 2) return(false);
 
 				// Clear UART Buffer
 				this->Clear_UART_Buffer();
@@ -656,14 +554,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CMEE_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				return (_Buffer.Response == _AT_OK_);
@@ -687,56 +578,34 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CEER_, 21};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
 
 					// \r\n#CEER: 999\r\n\r\nOK\r\n
-					if (_Buffer.Read_Order == 19) {
+					if (_Buffer.Read_Order == 19 && isdigit(_IO_Buffer[9]) && isdigit(_IO_Buffer[10]) && isdigit(_IO_Buffer[11])) {
 
-						// Get Number from Buffer
-						uint8_t _Digit_1 = _Buffer_Variable[9] - 48;
-						uint8_t _Digit_2 = _Buffer_Variable[10] - 48;
-						uint8_t _Digit_3 = _Buffer_Variable[11] - 48;
-
-						// Set Read Buffer
-						_Code = (_Digit_1 * 100) + (_Digit_2 * 10) + _Digit_3;
-
-						// End Function
+						_Code = (uint16_t)((_IO_Buffer[9] - '0') * 100)
+						      + (uint16_t)((_IO_Buffer[10] - '0') * 10)
+						      + (uint16_t)(_IO_Buffer[11] - '0');
 						return (true);
 
 					}
 
 					// \r\n#CEER: 99\r\n\r\nOK\r\n
-					else if (_Buffer.Read_Order == 18) {
+					else if (_Buffer.Read_Order == 18 && isdigit(_IO_Buffer[9]) && isdigit(_IO_Buffer[10])) {
 
-						// Get Number from Buffer
-						uint8_t _Digit_1 = _Buffer_Variable[9] - 48;
-						uint8_t _Digit_2 = _Buffer_Variable[10] - 48;
-
-						// Set Read Buffer
-						_Code = (_Digit_1 * 10) + _Digit_2;
-
-						// End Function
+						_Code = (uint16_t)((_IO_Buffer[9] - '0') * 10)
+						      + (uint16_t)(_IO_Buffer[10] - '0');
 						return (true);
 
 					}
 
 					// \r\n#CEER: 9\r\n\r\nOK\r\n
-					else if (_Buffer.Read_Order == 17) {
+					else if (_Buffer.Read_Order == 17 && isdigit(_IO_Buffer[9])) {
 
-						// Get Number from Buffer
-						_Code = _Buffer_Variable[9] - 48;
-
-						// End Function
+						_Code = (uint16_t)(_IO_Buffer[9] - '0');
 						return (true);
 
 					}
@@ -766,14 +635,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_ATE_, 13};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				return (_Buffer.Response == _AT_OK_);
@@ -798,14 +660,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_K_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				return (_Buffer.Response == _AT_OK_);
@@ -829,14 +684,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CPIN_, 30};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Set SIM State
 				_Code = _SIM_UNKNOWN_;
@@ -853,7 +701,7 @@
 					memset(_PIN_Response, '\0', 10);
 
 					// Handle Variables
-					sscanf(_Buffer_Variable, "\r\n+CPIN: %09s\r\n\r\nOK\r\n", _PIN_Response);
+					if (sscanf(_IO_Buffer, "\r\n+CPIN: %09s\r\n\r\nOK\r\n", _PIN_Response) != 1) return false;
 
 					// Control for SIM State
 					if (strstr(_PIN_Response, "READY")) _Code = _SIM_READY_;
@@ -888,14 +736,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CCID_, 37};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
@@ -912,10 +753,10 @@
 					for (uint8_t i = 0; i < _Buffer.Size; i++) {
 
 						// Handle ICCID
-						if (isdigit(_Buffer_Variable[i])) {
+						if (isdigit(_IO_Buffer[i])) {
 
 							// Set ICCID Variable
-							_ICCID[_Buffer.Data_Order++] = _Buffer_Variable[i];
+							_ICCID[_Buffer.Data_Order++] = _IO_Buffer[i];
 
 						}
 
@@ -952,14 +793,7 @@
 					// Declare Buffer Object
 					Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SIMDET_, 23};
 
-					// Declare Buffer Variable
-					char _Buffer_Variable[_Buffer.Size];
-
-					// Clear Buffer Variable
-					memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-					// Declare Response
-					this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+					this->Read_UART_Buffer(&_Buffer);
 
 					// Handle for Response
 					return (_Buffer.Response == _AT_OK_);
@@ -983,14 +817,7 @@
 					// Declare Buffer Object
 					Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SIMDET_, 23};
 
-					// Declare Buffer Variable
-					char _Buffer_Variable[_Buffer.Size];
-
-					// Clear Buffer Variable
-					memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-					// Declare Response
-					this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+					this->Read_UART_Buffer(&_Buffer);
 
 					// Clear Variables
 					_SIM_in_Pin_State = false;
@@ -1006,11 +833,11 @@
 						uint8_t _SIMDET_State = 0;
 
 						// Handle Query Answer
-						uint8_t _Parsed_Variable = sscanf(_Buffer_Variable, "\r\n#SIMDET: %01hhu,%01hhu\r\n\r\nOK\r\n", &_SIMDET_Mode, &_SIMDET_State);
+						uint8_t _Parsed_Variable = sscanf(_IO_Buffer, "\r\n#SIMDET: %01hhu,%01hhu\r\n\r\nOK\r\n", &_SIMDET_Mode, &_SIMDET_State);
 
 						// Assign SIM State
 						if (_Parsed_Variable == 2) {
-							
+
 							// Assign State
 							if (_SIMDET_State == 0) _SIM_in_Pin_State = false;
 							if (_SIMDET_State == 1) _SIM_in_Pin_State = true;
@@ -1057,14 +884,7 @@
 					// Declare Buffer Object
 					Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_GPIO_, 7};
 
-					// Declare Buffer Variable
-					char _Buffer_Variable[_Buffer.Size];
-
-					// Clear Buffer Variable
-					memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-					// Get Response
-					this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+					this->Read_UART_Buffer(&_Buffer);
 
 					// Handle for Response
 					return (_Buffer.Response == _AT_OK_);
@@ -1094,14 +914,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SLED_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Get Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				return (_Buffer.Response == _AT_OK_);
@@ -1125,14 +938,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SLEDSAV_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				return (_Buffer.Response == _AT_OK_);
@@ -1160,14 +966,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_E2SLRI_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Get Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				return (_Buffer.Response == _AT_OK_);
@@ -1195,14 +994,7 @@
 					// Declare Buffer Object
 					Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CREG_, 25};
 
-					// Declare Buffer Variable
-					char _Buffer_Variable[_Buffer.Size];
-
-					// Clear Buffer Variable
-					memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-					// Get Response
-					this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+					this->Read_UART_Buffer(&_Buffer);
 
 					// Handle for Response
 					return (_Buffer.Response == _AT_OK_);
@@ -1226,20 +1018,13 @@
 					// Declare Buffer Object
 					Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CREG_, 25};
 
-					// Declare Buffer Variable
-					char _Buffer_Variable[_Buffer.Size];
-
-					// Clear Buffer Variable
-					memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-					// Get Response
-					this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+					this->Read_UART_Buffer(&_Buffer);
 
 					// Handle for Response
 					if (_Buffer.Response == _AT_OK_) {
 
 						// Handle Variables
-						sscanf(_Buffer_Variable, "\r\n+CREG: %hhu,%hhu\r\n\r\nOK\r\n", &_Mode, &_Stat);
+						if (sscanf(_IO_Buffer, "\r\n+CREG: %hhu,%hhu\r\n\r\nOK\r\n", &_Mode, &_Stat) != 2) return false;
 
 						// End Function
 						return (true);
@@ -1276,14 +1061,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CGDCONT_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				return (_Buffer.Response == _AT_OK_);
@@ -1310,14 +1088,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SGACT_, 35};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
@@ -1325,7 +1096,7 @@
 					// \r\n#SGACT: 000.000.000.000\r\n\r\nOK\r\n
 
 					// Handle IP
-					uint8_t _Variable_Count = sscanf(_Buffer_Variable, "\r\n#SGACT: %03hhu.%03hhu.%03hhu.%03hhu\r\n\r\nOK\r\n", &_IP_Segment[0], &_IP_Segment[1], &_IP_Segment[2], &_IP_Segment[3]);
+					uint8_t _Variable_Count = sscanf(_IO_Buffer, "\r\n#SGACT: %03hhu.%03hhu.%03hhu.%03hhu\r\n\r\nOK\r\n", &_IP_Segment[0], &_IP_Segment[1], &_IP_Segment[2], &_IP_Segment[3]);
 
 					// Control for IP
 					return (_Variable_Count == 4);
@@ -1357,14 +1128,7 @@
 					// Declare Buffer Object
 					Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_WS46_, 20};
 
-					// Declare Buffer Variable
-					char _Buffer_Variable[_Buffer.Size];
-
-					// Clear Buffer Variable
-					memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-					// Declare Response
-					this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+					this->Read_UART_Buffer(&_Buffer);
 
 					// Handle for Response
 					if (_Buffer.Response == _AT_OK_) {
@@ -1376,12 +1140,13 @@
 						_Mode = _CONNECTION_UNKNOWN_;
 
 						// Handle Variables
-						sscanf(_Buffer_Variable, "\r\n+WS46: %02hhu\r\n\r\nOK\r\n", &_Connection_Mode);
+						if (sscanf(_IO_Buffer, "\r\n+WS46: %02hhu\r\n\r\nOK\r\n", &_Connection_Mode) != 1) return false;
 
-						// Control for Mode
+						// Map WS46 mode to connection type — 3GPP TS 27.007 §7.2
+						// 12=GSM(2G), 22=UTRAN(3G), 25=E-UTRAN(4G), 28=UTRAN+E-UTRAN, 29=GERAN+UTRAN, 30=GERAN+E-UTRAN, 31=GERAN+UTRAN+E-UTRAN
 						if (_Connection_Mode == 12) _Mode = _CONNECTION_2G_;
 						if (_Connection_Mode == 22 || _Connection_Mode == 29) _Mode = _CONNECTION_3G_;
-						if (_Connection_Mode == 25 || _Connection_Mode == 28 || _Connection_Mode == 30 || _Connection_Mode == 31 ) _Mode = _CONNECTION_4G_;
+						if (_Connection_Mode == 25 || _Connection_Mode == 28 || _Connection_Mode == 30 || _Connection_Mode == 31) _Mode = _CONNECTION_4G_;
 
 						// Handle Response
 						return (_Mode != _CONNECTION_UNKNOWN_);
@@ -1408,14 +1173,7 @@
 					// Declare Buffer Object
 					Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_WS46_, 20};
 
-					// Declare Buffer Variable
-					char _Buffer_Variable[_Buffer.Size];
-
-					// Clear Buffer Variable
-					memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-					// Declare Response
-					this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+					this->Read_UART_Buffer(&_Buffer);
 
 					// Handle for Response
 					return (_Buffer.Response == _AT_OK_);
@@ -1447,22 +1205,17 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_RFSTS_, 120};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
 
 					// Control for Connection Type
-					if (_Connection_Type == _CONNECTION_2G_) {
+					if (_Connection_Type == _CONNECTION_2G_ || _Connection_Type == _CONNECTION_3G_) {
 
-					} else if (_Connection_Type == _CONNECTION_3G_) {
+						// 2G/3G RFSTS parsing not implemented
+						_MCC = 0; _MNC = 0; _RSSI = 0; _Signal_Level = 0; _TAC = 0; _CID = 0;
+						return(false);
 
 					} else if (_Connection_Type == _CONNECTION_4G_) {
 
@@ -1483,23 +1236,23 @@
 						// \r\n#RFSTS: "286 01",1651,-99,-62,-16,2242,,128,3,1,0B5D120,"286016339612498","Turkcell",3,3,103\r\n\r\nOK\r\n
 
 						// Read MCC
-						_MCC = (uint16_t)this->Handle_Number(_Buffer_Variable, '\"', 1, ' ', 2);
+						_MCC = (uint16_t)this->Handle_Number(_IO_Buffer, '\"', 1, ' ', 2);
 
 						// Read MNC
-						_MNC = (uint16_t)this->Handle_Number(_Buffer_Variable, ' ', 2, '\"', 2);
+						_MNC = (uint16_t)this->Handle_Number(_IO_Buffer, ' ', 2, '\"', 2);
 
 						// Read RSSI
-						_RSSI = (uint16_t)this->Handle_Number(_Buffer_Variable, '-', 2, ',', 4);
+						_RSSI = (uint16_t)this->Handle_Number(_IO_Buffer, '-', 2, ',', 4);
 
 						// Calculate Signal Level
 						_Signal_Level = 0;
 						_Signal_Level = this->RSSI_to_Signal_Quality(_RSSI * -1);
 
 						// Read TAC
-						_TAC = (uint16_t)this->Handle_HEX(_Buffer_Variable, ',', 5, ',', 6);
+						_TAC = (uint16_t)this->Handle_HEX(_IO_Buffer, ',', 5, ',', 6);
 
 						// Read CID
-						_CID = (uint32_t)this->Handle_HEX(_Buffer_Variable, ',', 10, ',', 11);
+						_CID = (uint32_t)this->Handle_HEX(_IO_Buffer, ',', 10, ',', 11);
 
 						// End Function
 						return(true);
@@ -1543,14 +1296,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CSQ_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
@@ -1562,10 +1308,11 @@
 					// \r\n+CSQ: 999,9\r\n\r\nOK\r\n
 					// \r\n+CSQ: 999,99\r\n\r\nOK\r\n
 
-					// Read MCC
-					uint8_t _CSQ = this->Handle_Number(_Buffer_Variable, ' ', 1, ',', 1);
+					// Read CSQ value
+					uint8_t _CSQ = this->Handle_Number(_IO_Buffer, ' ', 1, ',', 1);
 
-					// Calculate RSSI
+					// Map CSQ to RSSI (dBm) per 3GPP TS 27.007 §8.5
+					// 0→-113, 1→-111, 2..30→-109+(n-2)*2, 31→-51, 99=unknown
 					if (_CSQ == 0) _RSSI = 113;
 					else if (_CSQ == 1) _RSSI = 111;
 					else if (_CSQ <= 30) _RSSI = 109 - (_CSQ * 2);
@@ -1610,14 +1357,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SCFG_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -1652,14 +1392,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SCFGEXT_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -1694,14 +1427,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SCFGEXT2_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -1718,7 +1444,7 @@
 				delay(_AT_WAIT_DELAY_);
 
 				// Send UART Command
-				GSM_Serial->print(F("AT#SCFGEXT2="));
+				GSM_Serial->print(F("AT#SCFGEXT3="));
 				GSM_Serial->print(_Conn_ID);
 				GSM_Serial->print(F(","));
 				GSM_Serial->print(_immRsp);
@@ -1738,14 +1464,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SCFGEXT3_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -1780,14 +1499,7 @@
 					// Declare Buffer Object
 					Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FRWL_, 15};
 
-					// Declare Buffer Variable
-					char _Buffer_Variable[_Buffer.Size];
-
-					// Clear Buffer Variable
-					memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-					// Declare Response
-					this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+					this->Read_UART_Buffer(&_Buffer);
 
 					// End Function
 					return(_Buffer.Response == _AT_OK_);
@@ -1817,14 +1529,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_ICMP_, 15};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -1850,14 +1555,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_Ping_, 250};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// \r\n#PING: 01,"159.89.111.150",0,51\r\n
 				// \r\nOK\r\n
@@ -1869,7 +1567,7 @@
 					_Time = 0;
 
 					// Get Response Time
-					_Time = (uint16_t)this->Handle_Number(_Buffer_Variable, ',', 2, '\r', 2);
+					_Time = (uint16_t)this->Handle_Number(_IO_Buffer, ',', 2, '\r', 2);
 
 					// End Function
 					return(true);
@@ -1898,36 +1596,29 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CCLK_, 40};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
 
 					/*
 					--> AT+CCLK?\r\n
-					<-- \r\n+CCLK: "23/08/02,11:18:16+12"\r\n\r\nOK\r\n
+					<-- \r\n+CCLK: "YY/MM/DD,HH:MM:SS±ZZ"\r\n\r\nOK\r\n
+					     Timezone offset in quarter-hours; sign may be + || -
 					*/
 
-					// Handle Variables
-					_Year = this->Handle_Number(_Buffer_Variable, '\"', 1, '/', 1);
-					_Month = this->Handle_Number(_Buffer_Variable, '/', 1, '/', 2);
-					_Day = this->Handle_Number(_Buffer_Variable, '/', 2, ',', 1);
-					_Hour = this->Handle_Number(_Buffer_Variable, ',', 1, ':', 2);
-					_Minute = this->Handle_Number(_Buffer_Variable, ':', 2, ':', 3);
-					_Second = this->Handle_Number(_Buffer_Variable, ':', 3, '+', 2);
-					_Time_Zone = this->Handle_Number(_Buffer_Variable, '+', 2, '\"', 2);
+					char _tz_sign = '+';
+					if (sscanf(_IO_Buffer,
+					    "\r\n+CCLK: \"%02hhu/%02hhu/%02hhu,%02hhu:%02hhu:%02hhu%c%02hhu\"\r\n\r\nOK\r\n",
+					    &_Year, &_Month, &_Day, &_Hour, &_Minute, &_Second, &_tz_sign, &_Time_Zone) < 6) return false;
 
-					// Control for Variables
-					if (_Year > 99 || _Year < 22 || _Month > 12 || _Day > 31 || _Hour > 24 || _Minute > 59 || _Second > 59) return false;
+					// Encode negative timezone as two's complement in uint8_t
+					if (_tz_sign == '-') _Time_Zone = (uint8_t)(0u - _Time_Zone);
 
-					// Control for Variable
+					// Validate date/time ranges
+					if (_Year > 99 || _Month > 12 || _Month == 0 || _Day > 31 || _Day == 0 ||
+					    _Hour > 23 || _Minute > 59 || _Second > 59) return false;
+
 					return (true);
 
 				}
@@ -1955,14 +1646,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CTZU_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -1989,14 +1673,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_NITZ_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -2021,14 +1698,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CCLKMODE_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -2055,14 +1725,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_TCPMAXWIN_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -2099,14 +1762,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SD_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -2131,14 +1787,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SH_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -2169,14 +1818,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SL_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -2201,15 +1843,6 @@
 				GSM_Serial->write(0x0A);
 
 				// \r\nOK\r\n\r\nSRING: 2,86\r\n
-
-				// Declare Buffer Object
-				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SA_, 30};
-
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
 
 				// Handle for Response
 				if (this->SRING(_Length)) return(true);
@@ -2237,14 +1870,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SS_, 60};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
@@ -2254,7 +1880,7 @@
 					// \r\n#SS: 2,2,000.000.000.000,80,000.000.000.000,54883\r\n\r\nOK\r\n
 
 					// Handle State
-					_State = (_Buffer_Variable[9] - 48);
+					_State = isdigit(_IO_Buffer[9]) ? (_IO_Buffer[9] - '0') : _SOCKET_CLOSED_;
 
 					// End Function
 					return (true);
@@ -2284,14 +1910,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SO_, 20};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -2316,14 +1935,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SI_, 50};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
@@ -2331,7 +1943,7 @@
 					// \r\n#SI: 2,51,0,13900,0\r\n\r\nOK\r\n
 
 					// Read Data Buffer
-					_Data_Buffer = (uint16_t)this->Handle_Number(_Buffer_Variable, ',', 3, ',', 4);
+					_Data_Buffer = (uint16_t)this->Handle_Number(_IO_Buffer, ',', 3, ',', 4);
 
 					// End Function
 					return(true);
@@ -2361,14 +1973,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SKTTO_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -2393,20 +1998,13 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SSEND_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				if (_Buffer.Response == _AT_SD_PROMPT_) {
 
 					// Send Delay
-					delay(10);
+					delay(_AT_SD_PROMPT_DELAY_);
 
 					// Send Data Pack
 					if (_Parser) _Parser(_Pack_Type);
@@ -2420,14 +2018,7 @@
 					// Command Chain Delay (Advice by Telit)
 					delay(_AT_WAIT_DELAY_);
 
-					// Declare Buffer Variable
-					char _Buffer_Send_Variable[_Buffer_Send.Size];
-
-					// Clear Buffer Variable
-					memset(_Buffer_Send_Variable, '\0', _Buffer_Send.Size);
-
-					// Declare Response
-					this->Read_UART_Buffer(&_Buffer_Send, _Buffer_Send_Variable);
+					this->Read_UART_Buffer(&_Buffer_Send);
 
 					// End Function
 					return(_Buffer_Send.Response == _AT_OK_);
@@ -2455,20 +2046,13 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SSEND_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				if (_Buffer.Response == _AT_SD_PROMPT_) {
 
 					// Send Delay
-					delay(10);
+					delay(_AT_SD_PROMPT_DELAY_);
 
 					// Print Header
 					if (_Method == _HTTP_RESPONSE_) {
@@ -2512,14 +2096,7 @@
 					// Command Chain Delay (Advice by Telit)
 					delay(_AT_WAIT_DELAY_);
 
-					// Declare Buffer Variable
-					char _Buffer_Send_Variable[_Buffer_Send.Size];
-
-					// Clear Buffer Variable
-					memset(_Buffer_Send_Variable, '\0', _Buffer_Send.Size);
-
-					// Declare Response
-					this->Read_UART_Buffer(&_Buffer_Send, _Buffer_Send_Variable);
+					this->Read_UART_Buffer(&_Buffer_Send);
 
 					// End Function
 					return(_Buffer_Send.Response == _AT_OK_);
@@ -2547,20 +2124,13 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SSEND_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				if (_Buffer.Response == _AT_SD_PROMPT_) {
 
 					// Send Delay
-					delay(10);
+					delay(_AT_SD_PROMPT_DELAY_);
 
 					// Print Header
 					if (_Method == _HTTP_RESPONSE_) {
@@ -2576,7 +2146,7 @@
 						// Print Header
 						GSM_Serial->print(F("POST ")); GSM_Serial->print(_EndPoint); GSM_Serial->print(F(" HTTP/1.1\r\n"));
 						GSM_Serial->print(F("Host: ")); GSM_Serial->print(_Server); GSM_Serial->print(F("\r\n"));
-						GSM_Serial->print(F("Host: ")); GSM_Serial->print(strlen(_Data_Pack)); GSM_Serial->print(F("\r\n"));
+						GSM_Serial->print(F("Content-Length: ")); GSM_Serial->print(strlen(_Data_Pack)); GSM_Serial->print(F("\r\n"));
 						GSM_Serial->print(F("Content-Type: application/json\r\n")); 
 						GSM_Serial->print(F("User-Agent: PostOffice\r\n"));
 						GSM_Serial->print(F("\r\n"));
@@ -2605,14 +2175,7 @@
 					// Command Chain Delay (Advice by Telit)
 					delay(_AT_WAIT_DELAY_);
 
-					// Declare Buffer Variable
-					char _Buffer_Send_Variable[_Buffer_Send.Size];
-
-					// Clear Buffer Variable
-					memset(_Buffer_Send_Variable, '\0', _Buffer_Send.Size);
-
-					// Declare Response
-					this->Read_UART_Buffer(&_Buffer_Send, _Buffer_Send_Variable);
+					this->Read_UART_Buffer(&_Buffer_Send);
 
 					// End Function
 					return(_Buffer_Send.Response == _AT_OK_);
@@ -2631,7 +2194,7 @@
 				this->Clear_UART_Buffer();
 
 				// Command Chain Delay (Advice by Telit)
-				delay(5);
+				delay(_AT_UART_READ_DELAY_);
 
 				// Send UART Command
 				GSM_Serial->print(F("AT#SRECV="));
@@ -2644,8 +2207,13 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SRECV_, 1023};
 
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Data);
+				this->Read_UART_Buffer(&_Buffer);
+
+				// Copy received data to caller buffer (bounded by actual bytes read)
+				if (_Buffer.Response == _AT_OK_) {
+					memcpy(_Data, _IO_Buffer, _Buffer.Read_Order);
+					_Data[_Buffer.Read_Order] = '\0';
+				}
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -2658,11 +2226,8 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, 50000, 30};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
+				// Clear IO Buffer
+				memset(_IO_Buffer, '\0', 30);
 
 				// Read Current Time
 				const uint32_t Current_Time = millis();
@@ -2681,17 +2246,17 @@
 					delay(1);
 
 					// Read Serial Char
-					_Buffer_Variable[_Buffer.Read_Order] = GSM_Serial->read();
+					_IO_Buffer[_Buffer.Read_Order] = GSM_Serial->read();
 
 					// Handle for Response
-					if (_Buffer.Read_Order == 21 && _Buffer_Variable[8] == 'S' && _Buffer_Variable[20] == '\r') {
+					if (_Buffer.Read_Order == 21 && _IO_Buffer[8] == 'S' && _IO_Buffer[20] == '\r') {
 
 						// \r\nOK\r\n\r\nSRING: 1,999\r\n
 
 						// Geth Length from Buffer
-						uint8_t _Digit_1 = _Buffer_Variable[17] - 48;
-						uint8_t _Digit_2 = _Buffer_Variable[18] - 48;
-						uint8_t _Digit_3 = _Buffer_Variable[19] - 48;
+						uint8_t _Digit_1 = _IO_Buffer[17] - '0';
+						uint8_t _Digit_2 = _IO_Buffer[18] - '0';
+						uint8_t _Digit_3 = _IO_Buffer[19] - '0';
 
 						// Calculate Length
 						_Length = (_Digit_1 * 100) + (_Digit_2 * 10) + _Digit_3;
@@ -2702,13 +2267,13 @@
 						// End Function
 						return(true);
 
-					} else if (_Buffer.Read_Order == 20 && _Buffer_Variable[8] == 'S' && _Buffer_Variable[19] == '\r') {
+					} else if (_Buffer.Read_Order == 20 && _IO_Buffer[8] == 'S' && _IO_Buffer[19] == '\r') {
 
 						// \r\nOK\r\n\r\nSRING: 1,99\r\n
 
 						// Geth Length from Buffer
-						uint8_t _Digit_1 = _Buffer_Variable[17] - 48;
-						uint8_t _Digit_2 = _Buffer_Variable[18] - 48;
+						uint8_t _Digit_1 = _IO_Buffer[17] - '0';
+						uint8_t _Digit_2 = _IO_Buffer[18] - '0';
 
 						// Calculate Length
 						_Length = (_Digit_1 * 10) + _Digit_2;
@@ -2719,12 +2284,12 @@
 						// End Function
 						return(true);
 
-					} else if (_Buffer.Read_Order == 19 && _Buffer_Variable[8] == 'S' && _Buffer_Variable[18] == '\r') {
+					} else if (_Buffer.Read_Order == 19 && _IO_Buffer[8] == 'S' && _IO_Buffer[18] == '\r') {
 
 						// \r\nOK\r\n\r\nSRING: 1,9\r\n
 
 						// Geth Length from Buffer
-						_Length = _Buffer_Variable[17] - 48;
+						_Length = _IO_Buffer[17] - '0';
 
 						// Set Response
 						_Buffer.Response = _AT_SRING_;
@@ -2732,14 +2297,14 @@
 						// End Function
 						return(true);
 
-					} else if (_Buffer.Read_Order == 15 && _Buffer_Variable[2] == 'S' && _Buffer_Variable[14] == '\r') {
+					} else if (_Buffer.Read_Order == 15 && _IO_Buffer[2] == 'S' && _IO_Buffer[14] == '\r') {
 
 						// \r\nSRING: 1,999\r\n
 
 						// Geth Length from Buffer
-						uint8_t _Digit_1 = _Buffer_Variable[11] - 48;
-						uint8_t _Digit_2 = _Buffer_Variable[12] - 48;
-						uint8_t _Digit_3 = _Buffer_Variable[13] - 48;
+						uint8_t _Digit_1 = _IO_Buffer[11] - '0';
+						uint8_t _Digit_2 = _IO_Buffer[12] - '0';
+						uint8_t _Digit_3 = _IO_Buffer[13] - '0';
 
 						// Calculate Length
 						_Length = (_Digit_1 * 100) + (_Digit_2 * 10) + _Digit_3;
@@ -2750,13 +2315,13 @@
 						// End Function
 						return(true);
 
-					} else if (_Buffer.Read_Order == 14 && _Buffer_Variable[2] == 'S' && _Buffer_Variable[13] == '\r') {
+					} else if (_Buffer.Read_Order == 14 && _IO_Buffer[2] == 'S' && _IO_Buffer[13] == '\r') {
 
 						// \r\nSRING: 1,99\r\n
 
 						// Geth Length from Buffer
-						uint8_t _Digit_1 = _Buffer_Variable[11] - 48;
-						uint8_t _Digit_2 = _Buffer_Variable[12] - 48;
+						uint8_t _Digit_1 = _IO_Buffer[11] - '0';
+						uint8_t _Digit_2 = _IO_Buffer[12] - '0';
 
 						// Calculate Length
 						_Length = (_Digit_1 * 10) + _Digit_2;
@@ -2767,12 +2332,12 @@
 						// End Function
 						return(true);
 
-					} else if (_Buffer.Read_Order == 13 && _Buffer_Variable[2] == 'S' && _Buffer_Variable[12] == '\r') {
+					} else if (_Buffer.Read_Order == 13 && _IO_Buffer[2] == 'S' && _IO_Buffer[12] == '\r') {
 
 						// \r\nSRING: 1,9\r\n
 
 						// Geth Length from Buffer
-						_Length = _Buffer_Variable[11] - 48;
+						_Length = _IO_Buffer[11] - '0';
 
 						// Set Response
 						_Buffer.Response = _AT_SRING_;
@@ -2783,7 +2348,7 @@
 					}
 
 					// Increase Read Order
-					if (isAscii(_Buffer_Variable[_Buffer.Read_Order]) || _Buffer_Variable[_Buffer.Read_Order] == '\r' || _Buffer_Variable[_Buffer.Read_Order] == '\n' || _Buffer_Variable[_Buffer.Read_Order] == ' ') _Buffer.Read_Order++;
+					if (isAscii(_IO_Buffer[_Buffer.Read_Order]) || _IO_Buffer[_Buffer.Read_Order] == '\r' || _IO_Buffer[_Buffer.Read_Order] == '\n' || _IO_Buffer[_Buffer.Read_Order] == ' ') _Buffer.Read_Order++;
 
 					// Handle for timeout
 					if (millis() - Current_Time >= _Buffer.Time_Out) return(false);
@@ -2799,11 +2364,8 @@
 				// Declare Buffer Object
 				Serial_Buffer Buffer = {_AT_TIMEOUT_, 0, 0, 1000, 20};
 
-				// Declare Buffer Variable
-				char Buffer_Variable[Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(Buffer_Variable, '\0', Buffer.Size);
+				// Clear IO Buffer
+				memset(_IO_Buffer, '\0', 20);
 
 				// Read Current Time
 				const uint32_t Current_Time = millis();
@@ -2814,15 +2376,18 @@
 				while (!Buffer.Response) {
 
 					// Read Serial Char
-					Buffer_Variable[Buffer.Read_Order] = GSM_Serial->read();
+					_IO_Buffer[Buffer.Read_Order] = GSM_Serial->read();
 
 					// Handle for Message End
-					if (Buffer.Read_Order > 5 && Buffer_Variable[Buffer.Read_Order - 1] == '\r' && Buffer_Variable[Buffer.Read_Order] == '\n') Buffer.Response = true;
+					if (Buffer.Read_Order > 5 && _IO_Buffer[Buffer.Read_Order - 1] == '\r' && _IO_Buffer[Buffer.Read_Order] == '\n') Buffer.Response = true;
 
 					// Increase Read Order
-					if (Buffer_Variable[Buffer.Read_Order] > 31 && Buffer_Variable[Buffer.Read_Order] < 127) Buffer.Read_Order += 1;
-					if (Buffer_Variable[Buffer.Read_Order] == '\r') Buffer.Read_Order += 1;
-					if (Buffer_Variable[Buffer.Read_Order] == '\n') Buffer.Read_Order += 1;
+					if (_IO_Buffer[Buffer.Read_Order] > 31 && _IO_Buffer[Buffer.Read_Order] < 127) Buffer.Read_Order += 1;
+					if (_IO_Buffer[Buffer.Read_Order] == '\r') Buffer.Read_Order += 1;
+					if (_IO_Buffer[Buffer.Read_Order] == '\n') Buffer.Read_Order += 1;
+
+					// Prevent buffer overflow
+					if (Buffer.Read_Order >= Buffer.Size - 1) return(false);
 
 					// Handle for timeout
 					if (millis() - Current_Time >= Buffer.Time_Out) return(false);
@@ -2830,14 +2395,14 @@
 				}
 
 				// Control for SRING
-				if (strstr(Buffer_Variable, "\r\nSRING") != NULL) return(true);
+				if (strstr(_IO_Buffer, "\r\nSRING") != NULL) return(true);
 
 				// End Function
 				return(false);
 
 			}
 
-			// Nanual DNS Selection Function
+			// Manual DNS Selection Function
 			bool DNS(const uint8_t _ConnID, const char * _Primary, const char * _Secondary) {
 
 				// Clear UART Buffer
@@ -2849,7 +2414,7 @@
 				// Send UART Command
 				GSM_Serial->print(F("AT#DNS="));
 				GSM_Serial->print(_ConnID);
-				GSM_Serial->print(F("\""));
+				GSM_Serial->print(F(",\""));
 				GSM_Serial->print(_Primary);
 				GSM_Serial->print(F("\",\""));
 				GSM_Serial->print(_Secondary);
@@ -2860,14 +2425,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_DNS_, 20};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -2892,14 +2450,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CACHEDNS_, 20};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -2923,14 +2474,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPCLOSE_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -2957,14 +2501,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPCWD_, 30};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -2991,14 +2528,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPFSIZE_, 30};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
@@ -3007,7 +2537,7 @@
 					// \r\n#FTPFSIZE: 329463\r\n\r\nOK\r\n
 
 					// Parse Length
-					sscanf(_Buffer_Variable, "\r\n#FTPFSIZE: %lu\r\n\r\nOK\r\n", &_Length);
+					if (sscanf(_IO_Buffer, "\r\n#FTPFSIZE: %lu\r\n\r\nOK\r\n", &_Length) != 1) return false;
 
 					// End Function
 					return (true);
@@ -3040,14 +2570,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPGETPKT_, 30};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -3079,14 +2602,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPOPEN_, 30};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -3097,10 +2613,10 @@
 			bool FTPRECV(const uint16_t _Size, char * _Data) {
 
 				// Clear UART Buffer
-//				this->Clear_UART_Buffer();
+				this->Clear_UART_Buffer();
 
 				// Command Chain Delay (Advice by Telit)
-//				delay(_AT_WAIT_DELAY_);
+				delay(_AT_WAIT_DELAY_);
 
 				// Send UART Command
 				GSM_Serial->print(F("AT#FTPRECV="));
@@ -3111,22 +2627,16 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPRECV_, 1024};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
 					
 					// \r\n#FTPRECV: 200\r\n20202055\r\n:100BA00020202020000D0A002C002C002C00415495\r\n:100BB00023534C3D000D0A004154234532534C52FF\r\n:100BC000493D000D0A00415423534C4544534156BE\r\n:100BD000000D0A00415423534C45443D000D0A00CA\r\n:100BE0004\r\n\r\nOK\r\n
 
-					// Parse Size
-					strcpy(_Data, _Buffer_Variable);
+					// Copy received data (bounded by actual bytes read)
+					memcpy(_Data, _IO_Buffer, _Buffer.Read_Order);
+					_Data[_Buffer.Read_Order] = '\0';
 
 					// End Function
 					return (true);
@@ -3156,14 +2666,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPTO_, 30};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -3188,14 +2691,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPTYPE_, 30};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -3220,21 +2716,14 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_Z_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
 
 			}
 
-			// Detech From Network and Shut Down Modem Function
+			// Detach From Network and Shut Down Modem Function
 			bool SHDN(void) {
 
 				// Clear UART Buffer
@@ -3251,14 +2740,7 @@
 				// Declare Buffer Object
 				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SHDN_, 7};
 
-				// Declare Buffer Variable
-				char _Buffer_Variable[_Buffer.Size];
-
-				// Clear Buffer Variable
-				memset(_Buffer_Variable, '\0', _Buffer.Size);
-
-				// Declare Response
-				this->Read_UART_Buffer(&_Buffer, _Buffer_Variable);
+				this->Read_UART_Buffer(&_Buffer);
 
 				// End Function
 				return(_Buffer.Response == _AT_OK_);
@@ -3269,13 +2751,10 @@
 		public:
 
 			// Constructor
-			explicit LE910C1_EUX(Stream &_Serial) {
+			explicit LE910C1_EUX(Stream &_Serial) : GSM_Serial(&_Serial) {
 
-				// Set Serial Port
-				GSM_Serial = & _Serial;
+				memset(_IO_Buffer, '\0', _IO_Buffer_Size);
 
 			}
 
 	};
-
-#endif /* defined(AT_Command) */

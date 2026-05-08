@@ -1,4 +1,13 @@
 AUTHORS text
-NEWS text
+CHANGELOG.md text
+CONTRIBUTING.md text
+CODE_OF_CONDUCT.md text
+README.md text
+keywords.txt text
 
+*.h text
+*.ino text
+*.json text
 *.md text
+*.properties text
+*.txt text
