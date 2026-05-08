@@ -3,7 +3,7 @@
  *	distributed without the express permission of Mehmet Gunce Akkoyun.
  *
  *	Library				: AT_Command
- *	Version				: 02.00.01
+ *	Version				: 02.01.00
  *
  *********************************************************************************/
 
@@ -219,4 +219,13 @@
 #endif
 #ifndef _TIMEOUT_CSQ_
 	constexpr uint16_t _TIMEOUT_CSQ_ = 1000;
+#endif
+#ifndef _TIMEOUT_WSOPEN_
+	constexpr uint16_t _TIMEOUT_WSOPEN_ = 15000;
+#endif
+#ifndef _TIMEOUT_WSSEND_
+	constexpr uint16_t _TIMEOUT_WSSEND_ = 2000;
+#endif
+#ifndef _TIMEOUT_WSRECV_
+	constexpr uint16_t _TIMEOUT_WSRECV_ = 5000;
 #endif

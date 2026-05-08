@@ -36,6 +36,7 @@ Temporary Items
 .clang_complete
 .gcc-flags.json
 .pio
+src/library.json
 
 ### VisualStudioCode ###
 .vscode/*

@@ -4,7 +4,7 @@
  *
  *	Library				: AT_Command
  *	Code Developer		: Mehmet Gunce Akkoyun (akkoyun@me.com)
- *	Version				: 02.00.01
+ *	Version				: 02.01.00
  *
  *********************************************************************************/
 
@@ -94,6 +94,49 @@
 						if (_IO_Buffer[_Buffer->Read_Order] == '\n') _Buffer->Read_Order++;
 
 						// Prevent buffer overflow
+						if (_Buffer->Read_Order >= _Limit - 1) break;
+					}
+
+					// Handle for timeout
+					if (millis() - _Current_Time >= _Buffer->Time_Out) break;
+
+				}
+
+				// Control for Response
+				return (_Buffer->Response != _AT_TIMEOUT_);
+
+			}
+
+			// Binary-safe UART buffer read — advances Read_Order for every byte (no ASCII filter).
+			// Required for WebSocket frame headers that contain non-ASCII byte values.
+			bool Read_UART_Buffer_Raw(Serial_Buffer * _Buffer) {
+
+				// Response Wait Delay
+				delay(_AT_UART_READ_DELAY_);
+
+				// Reset state and clear shared buffer
+				_Buffer->Read_Order = 0;
+				_Buffer->Response = _AT_TIMEOUT_;
+				const uint16_t _Limit = (_Buffer->Size < _IO_Buffer_Size) ? _Buffer->Size : _IO_Buffer_Size;
+				memset(_IO_Buffer, '\0', _Limit);
+
+				// Read Current Time
+				const uint32_t _Current_Time = millis();
+
+				// Read UART Response
+				while (!_Buffer->Response) {
+
+					// Read Serial Char
+					_IO_Buffer[_Buffer->Read_Order] = GSM_Serial->read();
+
+					// Control for Response
+					if (this->Find(_AT_OK_,    _IO_Buffer, _Buffer->Read_Order)) _Buffer->Response = _AT_OK_;
+					if (this->Find(_AT_ERROR_, _IO_Buffer, _Buffer->Read_Order)) _Buffer->Response = _AT_ERROR_;
+					if (this->Find(_AT_CME_,   _IO_Buffer, _Buffer->Read_Order)) _Buffer->Response = _AT_CME_;
+
+					// Advance for every byte regardless of value
+					if (!_Buffer->Response) {
+						_Buffer->Read_Order++;
 						if (_Buffer->Read_Order >= _Limit - 1) break;
 					}
 
@@ -2399,6 +2442,246 @@
 
 				// End Function
 				return(false);
+
+			}
+
+			// WebSocket Open Function
+			// Opens a TCP socket then performs the HTTP/1.1 Upgrade handshake (RFC 6455 §4.1).
+			bool WSOPEN(const uint8_t _ConnID, const char * _Host, const uint16_t _Port, const char * _Path) {
+
+				// Step 1 — TCP connect (command mode, manual close)
+				this->Clear_UART_Buffer();
+				delay(_AT_WAIT_DELAY_);
+
+				GSM_Serial->print(F("AT#SD="));
+				GSM_Serial->print(_ConnID);
+				GSM_Serial->print(F(",0,"));
+				GSM_Serial->print(_Port);
+				GSM_Serial->print(F(",\""));
+				GSM_Serial->print(_Host);
+				GSM_Serial->print(F("\",255,0,1"));
+				GSM_Serial->write(0x0D);
+				GSM_Serial->write(0x0A);
+
+				Serial_Buffer _Conn = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SD_, 7};
+				this->Read_UART_Buffer(&_Conn);
+				if (_Conn.Response != _AT_OK_) return(false);
+
+				// Step 2 — Send HTTP Upgrade request
+				this->Clear_UART_Buffer();
+				delay(_AT_WAIT_DELAY_);
+
+				GSM_Serial->print(F("AT#SSEND="));
+				GSM_Serial->print(_ConnID);
+				GSM_Serial->write(0x0D);
+				GSM_Serial->write(0x0A);
+
+				Serial_Buffer _Prompt = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SSEND_, 7};
+				this->Read_UART_Buffer(&_Prompt);
+				if (_Prompt.Response != _AT_SD_PROMPT_) return(false);
+
+				delay(_AT_SD_PROMPT_DELAY_);
+
+				GSM_Serial->print(F("GET "));
+				GSM_Serial->print(_Path);
+				GSM_Serial->print(F(" HTTP/1.1\r\nHost: "));
+				GSM_Serial->print(_Host);
+				GSM_Serial->print(F("\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"));
+				GSM_Serial->print(F("Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"));
+				GSM_Serial->print(F("Sec-WebSocket-Version: 13\r\n\r\n"));
+				GSM_Serial->write(0x1A);
+
+				Serial_Buffer _Req = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SSEND_, 7};
+				delay(_AT_WAIT_DELAY_);
+				this->Read_UART_Buffer(&_Req);
+				if (_Req.Response != _AT_OK_) return(false);
+
+				// Step 3 — Read 101 Switching Protocols response
+				this->Clear_UART_Buffer();
+				delay(_AT_WAIT_DELAY_);
+
+				GSM_Serial->print(F("AT#SRECV="));
+				GSM_Serial->print(_ConnID);
+				GSM_Serial->print(F(",512"));
+				GSM_Serial->write(0x0D);
+				GSM_Serial->write(0x0A);
+
+				Serial_Buffer _Resp = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_WSOPEN_, 1023};
+				this->Read_UART_Buffer(&_Resp);
+
+				return (_Resp.Response == _AT_OK_ && strstr(_IO_Buffer, "101") != NULL);
+
+			}
+
+			// WebSocket Send Function
+			// Sends a masked text frame (RFC 6455 §5.2). Selects a masking key such that
+			// no wire byte equals 0x1A, preventing premature AT#SSEND termination.
+			bool WSSEND(const uint8_t _ConnID, const char * _Data) {
+
+				const uint16_t _Len = (uint16_t)strlen(_Data);
+				if (_Len == 0 || _Len > 125) return(false);
+
+				// Choose per-column masking key: for byte position k, find v where
+				// no payload byte at column k XORed with v equals 0x1A.
+				uint8_t _Mask[4] = {0, 0, 0, 0};
+				for (uint8_t k = 0; k < 4; k++) {
+					for (uint8_t v = 1; v != 0; v++) {
+						if (v == 0x1A) continue;
+						bool _Safe = true;
+						for (uint16_t i = k; i < _Len; i += 4) {
+							if (((uint8_t)_Data[i] ^ v) == 0x1A) { _Safe = false; break; }
+						}
+						if (_Safe) { _Mask[k] = v; break; }
+					}
+					if (_Mask[k] == 0) return(false);
+				}
+
+				this->Clear_UART_Buffer();
+				delay(_AT_WAIT_DELAY_);
+
+				GSM_Serial->print(F("AT#SSEND="));
+				GSM_Serial->print(_ConnID);
+				GSM_Serial->write(0x0D);
+				GSM_Serial->write(0x0A);
+
+				Serial_Buffer _Prompt = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_WSSEND_, 7};
+				this->Read_UART_Buffer(&_Prompt);
+				if (_Prompt.Response != _AT_SD_PROMPT_) return(false);
+
+				delay(_AT_SD_PROMPT_DELAY_);
+
+				// Frame header: FIN=1, opcode=text(1), MASK=1, 7-bit length
+				GSM_Serial->write((uint8_t)0x81);
+				GSM_Serial->write((uint8_t)(0x80 | _Len));
+				GSM_Serial->write(_Mask[0]);
+				GSM_Serial->write(_Mask[1]);
+				GSM_Serial->write(_Mask[2]);
+				GSM_Serial->write(_Mask[3]);
+
+				// Masked payload
+				for (uint16_t i = 0; i < _Len; i++) {
+					GSM_Serial->write((uint8_t)((uint8_t)_Data[i] ^ _Mask[i & 3]));
+				}
+
+				GSM_Serial->write(0x1A);
+
+				Serial_Buffer _Send = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_WSSEND_, 7};
+				delay(_AT_WAIT_DELAY_);
+				this->Read_UART_Buffer(&_Send);
+
+				return(_Send.Response == _AT_OK_);
+
+			}
+
+			// WebSocket Receive Function
+			// Reads one server frame and returns the unmasked payload.
+			// Server-to-client frames are never masked (RFC 6455 §5.1).
+			bool WSRECV(const uint8_t _ConnID, char * _Data, const uint16_t _MaxLen, uint8_t & _Opcode) {
+
+				this->Clear_UART_Buffer();
+				delay(_AT_UART_READ_DELAY_);
+
+				GSM_Serial->print(F("AT#SRECV="));
+				GSM_Serial->print(_ConnID);
+				GSM_Serial->print(F(","));
+				GSM_Serial->print(_MaxLen + 16);
+				GSM_Serial->write(0x0D);
+				GSM_Serial->write(0x0A);
+
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_WSRECV_, 1023};
+				this->Read_UART_Buffer_Raw(&_Buffer);
+
+				if (_Buffer.Response != _AT_OK_) return(false);
+
+				// Skip "#SRECV: N,M\r\n" header — frame bytes follow the second \r\n
+				const char * _Frame = strstr(_IO_Buffer, "\r\n#SRECV:");
+				if (_Frame == NULL) return(false);
+				_Frame = strchr(_Frame + 2, '\n');
+				if (_Frame == NULL) return(false);
+				_Frame++;
+
+				// Parse RFC 6455 §5.2 frame header
+				_Opcode              = (uint8_t)_Frame[0] & 0x0F;
+				const uint16_t _PLen = (uint16_t)((uint8_t)_Frame[1] & 0x7F);
+
+				// Copy payload (server frames are unmasked; offset = 2)
+				const uint16_t _Copy = (_PLen < _MaxLen) ? _PLen : _MaxLen - 1;
+				memcpy(_Data, _Frame + 2, _Copy);
+				_Data[_Copy] = '\0';
+
+				return(true);
+
+			}
+
+			// WebSocket Ping Function — sends RFC 6455 §5.5.2 masked ping control frame
+			bool WSPING(const uint8_t _ConnID) {
+
+				this->Clear_UART_Buffer();
+				delay(_AT_WAIT_DELAY_);
+
+				GSM_Serial->print(F("AT#SSEND="));
+				GSM_Serial->print(_ConnID);
+				GSM_Serial->write(0x0D);
+				GSM_Serial->write(0x0A);
+
+				Serial_Buffer _Prompt = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_WSSEND_, 7};
+				this->Read_UART_Buffer(&_Prompt);
+				if (_Prompt.Response != _AT_SD_PROMPT_) return(false);
+
+				delay(_AT_SD_PROMPT_DELAY_);
+
+				// Ping frame: FIN|PING=0x89, MASK=1 + len=0 (empty payload)
+				GSM_Serial->write((uint8_t)0x89);
+				GSM_Serial->write((uint8_t)0x80);
+				GSM_Serial->write((uint8_t)0x01);
+				GSM_Serial->write((uint8_t)0x02);
+				GSM_Serial->write((uint8_t)0x03);
+				GSM_Serial->write((uint8_t)0x04);
+				GSM_Serial->write(0x1A);
+
+				Serial_Buffer _Send = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_WSSEND_, 7};
+				delay(_AT_WAIT_DELAY_);
+				this->Read_UART_Buffer(&_Send);
+
+				return(_Send.Response == _AT_OK_);
+
+			}
+
+			// WebSocket Close Function — sends RFC 6455 §5.5.1 masked close frame then closes TCP socket
+			bool WSCLOSE(const uint8_t _ConnID) {
+
+				this->Clear_UART_Buffer();
+				delay(_AT_WAIT_DELAY_);
+
+				GSM_Serial->print(F("AT#SSEND="));
+				GSM_Serial->print(_ConnID);
+				GSM_Serial->write(0x0D);
+				GSM_Serial->write(0x0A);
+
+				Serial_Buffer _Prompt = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_WSSEND_, 7};
+				this->Read_UART_Buffer(&_Prompt);
+
+				if (_Prompt.Response == _AT_SD_PROMPT_) {
+
+					delay(_AT_SD_PROMPT_DELAY_);
+
+					// Close frame: FIN|CLOSE=0x88, MASK=1 + len=0 (no status code)
+					GSM_Serial->write((uint8_t)0x88);
+					GSM_Serial->write((uint8_t)0x80);
+					GSM_Serial->write((uint8_t)0x05);
+					GSM_Serial->write((uint8_t)0x06);
+					GSM_Serial->write((uint8_t)0x07);
+					GSM_Serial->write((uint8_t)0x08);
+					GSM_Serial->write(0x1A);
+
+					Serial_Buffer _Send = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_WSSEND_, 7};
+					delay(_AT_WAIT_DELAY_);
+					this->Read_UART_Buffer(&_Send);
+
+				}
+
+				// Close TCP socket regardless of close frame outcome
+				return(this->SH(_ConnID));
 
 			}
 

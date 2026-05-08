@@ -12,6 +12,22 @@ All notable changes to this project will be documented in this file. The format 
 
 ---
 
+## [02.01.00] - 2026-05-08
+
+### Added
+
+- WebSocket support (RFC 6455) over the existing TCP socket infrastructure:
+  - `WSOPEN(connID, host, port, path)` — opens a TCP connection then performs the HTTP/1.1 Upgrade handshake; verifies `101 Switching Protocols` response.
+  - `WSSEND(connID, data)` — sends a masked text frame; masking key is selected such that no wire byte equals `0x1A`, preventing premature `AT#SSEND` termination.
+  - `WSRECV(connID, data, maxLen, opcode)` — reads one server frame using a binary-safe buffer read, parses the RFC 6455 header, and returns the unmasked payload.
+  - `WSPING(connID)` — sends a masked ping control frame with an empty payload.
+  - `WSCLOSE(connID)` — sends a masked close frame then closes the underlying TCP socket via `SH`.
+- `Read_UART_Buffer_Raw` private helper — same as `Read_UART_Buffer` but advances `Read_Order` for every byte regardless of ASCII value, enabling correct handling of binary WebSocket frame headers.
+- WebSocket opcode constants in `Definations.h`: `_WS_OPCODE_CONT_`, `_WS_OPCODE_TEXT_`, `_WS_OPCODE_BINARY_`, `_WS_OPCODE_CLOSE_`, `_WS_OPCODE_PING_`, `_WS_OPCODE_PONG_`.
+- WebSocket timeout constants in `Config.h`: `_TIMEOUT_WSOPEN_` (15 s), `_TIMEOUT_WSSEND_` (2 s), `_TIMEOUT_WSRECV_` (5 s).
+
+---
+
 ## [02.00.01] - 2026-05-08
 
 This release is a full refactor of the library. No new AT commands were added; all changes focus on correctness, memory safety, and code quality.

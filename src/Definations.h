@@ -3,7 +3,7 @@
  *	distributed without the express permission of Mehmet Gunce Akkoyun.
  *
  *	Library				: AT_Command
- *	Version				: 02.00.01
+ *	Version				: 02.01.00
  *
  *********************************************************************************/
 
@@ -137,3 +137,12 @@ constexpr uint8_t FOTA_FTP_Config_Error    = 52;
 constexpr uint8_t FOTA_FTP_File_Not_Found  = 53;
 constexpr uint8_t FOTA_FTP_File_Size_Error = 54;
 constexpr uint8_t FOTA_Download_MD5_Error  = 99;
+
+// WebSocket Opcode Definitions (RFC 6455 §5.2)
+// ---------------------------------------------
+constexpr uint8_t _WS_OPCODE_CONT_   = 0;
+constexpr uint8_t _WS_OPCODE_TEXT_   = 1;
+constexpr uint8_t _WS_OPCODE_BINARY_ = 2;
+constexpr uint8_t _WS_OPCODE_CLOSE_  = 8;
+constexpr uint8_t _WS_OPCODE_PING_   = 9;
+constexpr uint8_t _WS_OPCODE_PONG_   = 10;
