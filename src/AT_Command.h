@@ -482,11 +482,11 @@
 				// Handle for Response
 				if (_Buffer.Response == _AT_OK_) {
 
-					// Clear Buffer Variable
-					memset(_IMEI, '\0', 17);
+					// Clear Buffer Variable (IMEI = 15 digits + null terminator)
+					memset(_IMEI, '\0', 16);
 
 					// Control for Numeric
-					for (uint8_t i = 0; i < _Buffer.Size; i++) {
+					for (uint8_t i = 0; i < _Buffer.Size && _Buffer.Data_Order < 15; i++) {
 
 						// Control for Numeric
 						if (isdigit(_IO_Buffer[i])) {
