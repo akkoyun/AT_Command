@@ -4,7 +4,7 @@
  *
  *	Library				: AT_Command
  *	Code Developer		: Mehmet Gunce Akkoyun (akkoyun@me.com)
- *	Version				: 02.01.00
+ *	Version				: 02.01.01
  *
  *********************************************************************************/
 
@@ -2496,20 +2496,30 @@
 				this->Read_UART_Buffer(&_Req);
 				if (_Req.Response != _AT_OK_) return(false);
 
-				// Step 3 — Read 101 Switching Protocols response
-				this->Clear_UART_Buffer();
-				delay(_AT_WAIT_DELAY_);
+				// Step 3 — Poll for 101 Switching Protocols response.
+				// AT#SRECV returns ERROR immediately when the modem receive buffer is empty,
+				// so we retry until data arrives or the timeout expires.
+				const uint32_t _WS_Start = millis();
+				while (millis() - _WS_Start < (uint32_t)_TIMEOUT_WSOPEN_) {
 
-				GSM_Serial->print(F("AT#SRECV="));
-				GSM_Serial->print(_ConnID);
-				GSM_Serial->print(F(",512"));
-				GSM_Serial->write(0x0D);
-				GSM_Serial->write(0x0A);
+					this->Clear_UART_Buffer();
+					delay(_AT_WAIT_DELAY_);
 
-				Serial_Buffer _Resp = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_WSOPEN_, 1023};
-				this->Read_UART_Buffer(&_Resp);
+					GSM_Serial->print(F("AT#SRECV="));
+					GSM_Serial->print(_ConnID);
+					GSM_Serial->print(F(",512"));
+					GSM_Serial->write(0x0D);
+					GSM_Serial->write(0x0A);
 
-				return (_Resp.Response == _AT_OK_ && strstr(_IO_Buffer, "101") != NULL);
+					Serial_Buffer _Resp = {_AT_TIMEOUT_, 0, 0, 1000, 1023};
+					this->Read_UART_Buffer(&_Resp);
+
+					if (_Resp.Response == _AT_OK_ && strstr(_IO_Buffer, "101") != NULL) return(true);
+
+					delay(500);
+
+				}
+				return(false);
 
 			}
 
@@ -2632,6 +2642,41 @@
 
 				// Ping frame: FIN|PING=0x89, MASK=1 + len=0 (empty payload)
 				GSM_Serial->write((uint8_t)0x89);
+				GSM_Serial->write((uint8_t)0x80);
+				GSM_Serial->write((uint8_t)0x01);
+				GSM_Serial->write((uint8_t)0x02);
+				GSM_Serial->write((uint8_t)0x03);
+				GSM_Serial->write((uint8_t)0x04);
+				GSM_Serial->write(0x1A);
+
+				Serial_Buffer _Send = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_WSSEND_, 7};
+				delay(_AT_WAIT_DELAY_);
+				this->Read_UART_Buffer(&_Send);
+
+				return(_Send.Response == _AT_OK_);
+
+			}
+
+			// WebSocket Pong Function — sends RFC 6455 §5.5.3 masked pong control frame.
+			// Must be called when WSRECV returns opcode == _WS_OPCODE_PING_ (RFC 6455 §5.5.2 requires it).
+			bool WSPONG(const uint8_t _ConnID) {
+
+				this->Clear_UART_Buffer();
+				delay(_AT_WAIT_DELAY_);
+
+				GSM_Serial->print(F("AT#SSEND="));
+				GSM_Serial->print(_ConnID);
+				GSM_Serial->write(0x0D);
+				GSM_Serial->write(0x0A);
+
+				Serial_Buffer _Prompt = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_WSSEND_, 7};
+				this->Read_UART_Buffer(&_Prompt);
+				if (_Prompt.Response != _AT_SD_PROMPT_) return(false);
+
+				delay(_AT_SD_PROMPT_DELAY_);
+
+				// Pong frame: FIN|PONG=0x8A, MASK=1 + len=0 (empty payload)
+				GSM_Serial->write((uint8_t)0x8A);
 				GSM_Serial->write((uint8_t)0x80);
 				GSM_Serial->write((uint8_t)0x01);
 				GSM_Serial->write((uint8_t)0x02);

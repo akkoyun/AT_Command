@@ -12,6 +12,19 @@ All notable changes to this project will be documented in this file. The format 
 
 ---
 
+## [02.01.01] - 2026-05-08
+
+### Fixed
+
+- `WSOPEN` step 3: replaced single `AT#SRECV` call with a retry-poll loop. The Telit modem returns `ERROR` immediately when the receive buffer is empty, so polling every 500 ms (up to `_TIMEOUT_WSOPEN_`) is required to correctly wait for the server's `101 Switching Protocols` response.
+
+### Added
+
+- `WSPONG(connID)` — sends a masked pong control frame (RFC 6455 §5.5.3). Required when `WSRECV` returns `opcode == _WS_OPCODE_PING_`; the RFC mandates a pong reply or the server will close the connection.
+- Example `05_WebSocket` — full connect/send/receive/ping-pong/close demo with server-ping handling.
+
+---
+
 ## [02.01.00] - 2026-05-08
 
 ### Added
