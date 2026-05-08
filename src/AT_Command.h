@@ -4,7 +4,7 @@
  *
  *	Library				: AT_Command
  *	Code Developer		: Mehmet Gunce Akkoyun (akkoyun@me.com)
- *	Version				: 02.01.01
+ *	Version				: 02.02.00
  *
  *********************************************************************************/
 
@@ -2445,33 +2445,84 @@
 
 			}
 
-			// WebSocket Open Function
-			// Opens a TCP socket then performs the HTTP/1.1 Upgrade handshake (RFC 6455 §4.1).
-			bool WSOPEN(const uint8_t _ConnID, const char * _Host, const uint16_t _Port, const char * _Path) {
+			// WebSocket Open Function — HTTP/1.1 Upgrade handshake over plain TCP or TLS (RFC 6455 §4.1).
+			// Pass _SSL=true for wss:// (AT#SSLD, no certificate verification by default).
+			bool WSOPEN(const uint8_t _ConnID, const char * _Host, const uint16_t _Port, const char * _Path, const bool _SSL = false) {
 
-				// Step 1 — TCP connect (command mode, manual close)
+				// Step 1 — Open transport layer
 				this->Clear_UART_Buffer();
 				delay(_AT_WAIT_DELAY_);
 
-				GSM_Serial->print(F("AT#SD="));
-				GSM_Serial->print(_ConnID);
-				GSM_Serial->print(F(",0,"));
-				GSM_Serial->print(_Port);
-				GSM_Serial->print(F(",\""));
-				GSM_Serial->print(_Host);
-				GSM_Serial->print(F("\",255,0,1"));
-				GSM_Serial->write(0x0D);
-				GSM_Serial->write(0x0A);
+				if (_SSL) {
 
-				Serial_Buffer _Conn = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SD_, 7};
-				this->Read_UART_Buffer(&_Conn);
-				if (_Conn.Response != _AT_OK_) return(false);
+					// Configure SSL socket
+					GSM_Serial->print(F("AT#SSLCFG="));
+					GSM_Serial->print(_ConnID);
+					GSM_Serial->print(F(",1,512,90,600,50"));
+					GSM_Serial->write(0x0D);
+					GSM_Serial->write(0x0A);
+
+					Serial_Buffer _SSLCFG = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SSLCFG_, 7};
+					this->Read_UART_Buffer(&_SSLCFG);
+					if (_SSLCFG.Response != _AT_OK_) return(false);
+
+					// Security mode: cipher suite = auto, auth mode = 0 (no cert verify)
+					this->Clear_UART_Buffer();
+					delay(_AT_WAIT_DELAY_);
+
+					GSM_Serial->print(F("AT#SSLSECCFG="));
+					GSM_Serial->print(_ConnID);
+					GSM_Serial->print(F(",0,0"));
+					GSM_Serial->write(0x0D);
+					GSM_Serial->write(0x0A);
+
+					Serial_Buffer _SEC = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SSLSECCFG_, 7};
+					this->Read_UART_Buffer(&_SEC);
+					if (_SEC.Response != _AT_OK_) return(false);
+
+					// SSL socket dial (command mode, manual close)
+					this->Clear_UART_Buffer();
+					delay(_AT_WAIT_DELAY_);
+
+					GSM_Serial->print(F("AT#SSLD="));
+					GSM_Serial->print(_ConnID);
+					GSM_Serial->print(F(","));
+					GSM_Serial->print(_Port);
+					GSM_Serial->print(F(",\""));
+					GSM_Serial->print(_Host);
+					GSM_Serial->print(F("\",255,0,0"));
+					GSM_Serial->write(0x0D);
+					GSM_Serial->write(0x0A);
+
+					Serial_Buffer _SConn = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SSLD_, 7};
+					this->Read_UART_Buffer(&_SConn);
+					if (_SConn.Response != _AT_OK_) return(false);
+
+				} else {
+
+					// Plain TCP socket (command mode, manual close)
+					GSM_Serial->print(F("AT#SD="));
+					GSM_Serial->print(_ConnID);
+					GSM_Serial->print(F(",0,"));
+					GSM_Serial->print(_Port);
+					GSM_Serial->print(F(",\""));
+					GSM_Serial->print(_Host);
+					GSM_Serial->print(F("\",255,0,1"));
+					GSM_Serial->write(0x0D);
+					GSM_Serial->write(0x0A);
+
+					Serial_Buffer _Conn = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SD_, 7};
+					this->Read_UART_Buffer(&_Conn);
+					if (_Conn.Response != _AT_OK_) return(false);
+
+				}
 
 				// Step 2 — Send HTTP Upgrade request
 				this->Clear_UART_Buffer();
 				delay(_AT_WAIT_DELAY_);
 
-				GSM_Serial->print(F("AT#SSEND="));
+				if (_SSL) GSM_Serial->print(F("AT#SSLSEND="));
+				else      GSM_Serial->print(F("AT#SSEND="));
 				GSM_Serial->print(_ConnID);
 				GSM_Serial->write(0x0D);
 				GSM_Serial->write(0x0A);
@@ -2497,15 +2548,16 @@
 				if (_Req.Response != _AT_OK_) return(false);
 
 				// Step 3 — Poll for 101 Switching Protocols response.
-				// AT#SRECV returns ERROR immediately when the modem receive buffer is empty,
-				// so we retry until data arrives or the timeout expires.
+				// AT#SRECV / AT#SSLRECV return ERROR immediately when buffer is empty,
+				// so retry every 500 ms until data arrives or the timeout expires.
 				const uint32_t _WS_Start = millis();
 				while (millis() - _WS_Start < (uint32_t)_TIMEOUT_WSOPEN_) {
 
 					this->Clear_UART_Buffer();
 					delay(_AT_WAIT_DELAY_);
 
-					GSM_Serial->print(F("AT#SRECV="));
+					if (_SSL) GSM_Serial->print(F("AT#SSLRECV="));
+					else      GSM_Serial->print(F("AT#SRECV="));
 					GSM_Serial->print(_ConnID);
 					GSM_Serial->print(F(",512"));
 					GSM_Serial->write(0x0D);
@@ -2523,16 +2575,16 @@
 
 			}
 
-			// WebSocket Send Function
-			// Sends a masked text frame (RFC 6455 §5.2). Selects a masking key such that
-			// no wire byte equals 0x1A, preventing premature AT#SSEND termination.
-			bool WSSEND(const uint8_t _ConnID, const char * _Data) {
+			// WebSocket Send Function — sends a masked text frame (RFC 6455 §5.2).
+			// Supports payloads up to 65535 bytes via 16-bit extended length field.
+			// Masking key is chosen so no wire byte equals 0x1A (AT#SSEND/SSLSEND terminator).
+			bool WSSEND(const uint8_t _ConnID, const char * _Data, const bool _SSL = false) {
 
 				const uint16_t _Len = (uint16_t)strlen(_Data);
-				if (_Len == 0 || _Len > 125) return(false);
+				if (_Len == 0) return(false);
 
-				// Choose per-column masking key: for byte position k, find v where
-				// no payload byte at column k XORed with v equals 0x1A.
+				// Choose per-column masking key: for position k, find v where
+				// no payload[i] (i%4==k) XOR v equals 0x1A.
 				uint8_t _Mask[4] = {0, 0, 0, 0};
 				for (uint8_t k = 0; k < 4; k++) {
 					for (uint8_t v = 1; v != 0; v++) {
@@ -2549,7 +2601,8 @@
 				this->Clear_UART_Buffer();
 				delay(_AT_WAIT_DELAY_);
 
-				GSM_Serial->print(F("AT#SSEND="));
+				if (_SSL) GSM_Serial->print(F("AT#SSLSEND="));
+				else      GSM_Serial->print(F("AT#SSEND="));
 				GSM_Serial->print(_ConnID);
 				GSM_Serial->write(0x0D);
 				GSM_Serial->write(0x0A);
@@ -2560,9 +2613,19 @@
 
 				delay(_AT_SD_PROMPT_DELAY_);
 
-				// Frame header: FIN=1, opcode=text(1), MASK=1, 7-bit length
+				// Frame byte 0: FIN=1, opcode=text(1)
 				GSM_Serial->write((uint8_t)0x81);
-				GSM_Serial->write((uint8_t)(0x80 | _Len));
+
+				// Frame byte 1+: MASK=1 with 7-bit or 16-bit extended length (RFC 6455 §5.2)
+				if (_Len <= 125) {
+					GSM_Serial->write((uint8_t)(0x80 | _Len));
+				} else {
+					GSM_Serial->write((uint8_t)0xFE);            // MASK=1, 126 = 16-bit extended
+					GSM_Serial->write((uint8_t)(_Len >> 8));     // big-endian MSB
+					GSM_Serial->write((uint8_t)(_Len & 0xFF));   // big-endian LSB
+				}
+
+				// Masking key
 				GSM_Serial->write(_Mask[0]);
 				GSM_Serial->write(_Mask[1]);
 				GSM_Serial->write(_Mask[2]);
@@ -2583,15 +2646,16 @@
 
 			}
 
-			// WebSocket Receive Function
-			// Reads one server frame and returns the unmasked payload.
+			// WebSocket Receive Function — reads one server frame, returns unmasked payload.
+			// Handles 7-bit and 16-bit extended length fields (RFC 6455 §5.2).
 			// Server-to-client frames are never masked (RFC 6455 §5.1).
-			bool WSRECV(const uint8_t _ConnID, char * _Data, const uint16_t _MaxLen, uint8_t & _Opcode) {
+			bool WSRECV(const uint8_t _ConnID, char * _Data, const uint16_t _MaxLen, uint8_t & _Opcode, const bool _SSL = false) {
 
 				this->Clear_UART_Buffer();
 				delay(_AT_UART_READ_DELAY_);
 
-				GSM_Serial->print(F("AT#SRECV="));
+				if (_SSL) GSM_Serial->print(F("AT#SSLRECV="));
+				else      GSM_Serial->print(F("AT#SRECV="));
 				GSM_Serial->print(_ConnID);
 				GSM_Serial->print(F(","));
 				GSM_Serial->print(_MaxLen + 16);
@@ -2603,20 +2667,33 @@
 
 				if (_Buffer.Response != _AT_OK_) return(false);
 
-				// Skip "#SRECV: N,M\r\n" header — frame bytes follow the second \r\n
-				const char * _Frame = strstr(_IO_Buffer, "\r\n#SRECV:");
+				// Skip "#SRECV: N,M\r\n" or "#SSLRECV: N,M\r\n" header
+				const char * _Frame = strstr(_IO_Buffer, _SSL ? "\r\n#SSLRECV:" : "\r\n#SRECV:");
 				if (_Frame == NULL) return(false);
 				_Frame = strchr(_Frame + 2, '\n');
 				if (_Frame == NULL) return(false);
 				_Frame++;
 
 				// Parse RFC 6455 §5.2 frame header
-				_Opcode              = (uint8_t)_Frame[0] & 0x0F;
-				const uint16_t _PLen = (uint16_t)((uint8_t)_Frame[1] & 0x7F);
+				_Opcode = (uint8_t)_Frame[0] & 0x0F;
+				const uint8_t _LenByte = (uint8_t)_Frame[1] & 0x7F;
+				uint16_t _PLen;
+				uint8_t  _Offset;
 
-				// Copy payload (server frames are unmasked; offset = 2)
+				if (_LenByte <= 125) {
+					_PLen   = _LenByte;
+					_Offset = 2;
+				} else if (_LenByte == 126) {
+					// 16-bit extended length, big-endian
+					_PLen   = ((uint16_t)(uint8_t)_Frame[2] << 8) | (uint8_t)_Frame[3];
+					_Offset = 4;
+				} else {
+					return(false);   // 64-bit length: payload too large for embedded
+				}
+
+				// Copy payload (server frames are unmasked)
 				const uint16_t _Copy = (_PLen < _MaxLen) ? _PLen : _MaxLen - 1;
-				memcpy(_Data, _Frame + 2, _Copy);
+				memcpy(_Data, _Frame + _Offset, _Copy);
 				_Data[_Copy] = '\0';
 
 				return(true);
@@ -2624,12 +2701,13 @@
 			}
 
 			// WebSocket Ping Function — sends RFC 6455 §5.5.2 masked ping control frame
-			bool WSPING(const uint8_t _ConnID) {
+			bool WSPING(const uint8_t _ConnID, const bool _SSL = false) {
 
 				this->Clear_UART_Buffer();
 				delay(_AT_WAIT_DELAY_);
 
-				GSM_Serial->print(F("AT#SSEND="));
+				if (_SSL) GSM_Serial->print(F("AT#SSLSEND="));
+				else      GSM_Serial->print(F("AT#SSEND="));
 				GSM_Serial->print(_ConnID);
 				GSM_Serial->write(0x0D);
 				GSM_Serial->write(0x0A);
@@ -2659,12 +2737,13 @@
 
 			// WebSocket Pong Function — sends RFC 6455 §5.5.3 masked pong control frame.
 			// Must be called when WSRECV returns opcode == _WS_OPCODE_PING_ (RFC 6455 §5.5.2 requires it).
-			bool WSPONG(const uint8_t _ConnID) {
+			bool WSPONG(const uint8_t _ConnID, const bool _SSL = false) {
 
 				this->Clear_UART_Buffer();
 				delay(_AT_WAIT_DELAY_);
 
-				GSM_Serial->print(F("AT#SSEND="));
+				if (_SSL) GSM_Serial->print(F("AT#SSLSEND="));
+				else      GSM_Serial->print(F("AT#SSEND="));
 				GSM_Serial->print(_ConnID);
 				GSM_Serial->write(0x0D);
 				GSM_Serial->write(0x0A);
@@ -2692,13 +2771,14 @@
 
 			}
 
-			// WebSocket Close Function — sends RFC 6455 §5.5.1 masked close frame then closes TCP socket
-			bool WSCLOSE(const uint8_t _ConnID) {
+			// WebSocket Close Function — sends RFC 6455 §5.5.1 masked close frame then closes the socket
+			bool WSCLOSE(const uint8_t _ConnID, const bool _SSL = false) {
 
 				this->Clear_UART_Buffer();
 				delay(_AT_WAIT_DELAY_);
 
-				GSM_Serial->print(F("AT#SSEND="));
+				if (_SSL) GSM_Serial->print(F("AT#SSLSEND="));
+				else      GSM_Serial->print(F("AT#SSEND="));
 				GSM_Serial->print(_ConnID);
 				GSM_Serial->write(0x0D);
 				GSM_Serial->write(0x0A);
@@ -2725,7 +2805,18 @@
 
 				}
 
-				// Close TCP socket regardless of close frame outcome
+				// Close socket
+				if (_SSL) {
+					this->Clear_UART_Buffer();
+					delay(_AT_WAIT_DELAY_);
+					GSM_Serial->print(F("AT#SSLH="));
+					GSM_Serial->print(_ConnID);
+					GSM_Serial->write(0x0D);
+					GSM_Serial->write(0x0A);
+					Serial_Buffer _SH = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_SSLH_, 7};
+					this->Read_UART_Buffer(&_SH);
+					return(_SH.Response == _AT_OK_);
+				}
 				return(this->SH(_ConnID));
 
 			}

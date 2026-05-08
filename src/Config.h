@@ -3,7 +3,7 @@
  *	distributed without the express permission of Mehmet Gunce Akkoyun.
  *
  *	Library				: AT_Command
- *	Version				: 02.01.01
+ *	Version				: 02.02.00
  *
  *********************************************************************************/
 
@@ -228,4 +228,16 @@
 #endif
 #ifndef _TIMEOUT_WSRECV_
 	constexpr uint16_t _TIMEOUT_WSRECV_ = 5000;
+#endif
+#ifndef _TIMEOUT_SSLCFG_
+	constexpr uint16_t _TIMEOUT_SSLCFG_ = 1000;
+#endif
+#ifndef _TIMEOUT_SSLSECCFG_
+	constexpr uint16_t _TIMEOUT_SSLSECCFG_ = 1000;
+#endif
+#ifndef _TIMEOUT_SSLD_
+	constexpr uint16_t _TIMEOUT_SSLD_ = 65000;
+#endif
+#ifndef _TIMEOUT_SSLH_
+	constexpr uint16_t _TIMEOUT_SSLH_ = 5000;
 #endif

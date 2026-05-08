@@ -3,23 +3,32 @@
  *	distributed without the express permission of Mehmet Gunce Akkoyun.
  *
  *	Library				: AT_Command
- *	Version				: 02.01.01
+ *	Version				: 02.02.00
  *
  *	Example				: 05_WebSocket
- *	Description			: Connect to a WebSocket server, send a JSON message,
- *						  receive the response, and perform a ping/pong keepalive.
- *						  Demonstrates WSOPEN, WSSEND, WSRECV, WSPING, WSPONG, WSCLOSE.
+ *	Description			: WebSocket connect/send/receive/ping-pong/close.
+ *						  Demonstrates plain ws:// and secure wss:// connections.
+ *						  Shows correct server-initiated ping handling (WSPONG).
  *
  *********************************************************************************/
 
 #include <Arduino.h>
 #include <AT_Command.h>
 
-// ---- User configuration -------------------------------------------------------
-#define WS_HOST    "echo.websocket.events"   // replace with your WS server host
-#define WS_PORT    80
-#define WS_PATH    "/"
-#define APN        "internet"
+// ---- Connection mode ----------------------------------------------------------
+// Set WS_USE_SSL to true for wss://, false for ws://
+#define WS_USE_SSL  false
+
+// ---- Server configuration (change to your server) ----------------------------
+#if WS_USE_SSL
+    #define WS_HOST  "echo.websocket.events"   // wss://echo.websocket.events/
+    #define WS_PORT  443
+#else
+    #define WS_HOST  "echo.websocket.events"   // ws://echo.websocket.events/
+    #define WS_PORT  80
+#endif
+#define WS_PATH  "/"
+#define APN      "internet"
 // -------------------------------------------------------------------------------
 
 class Modem : public LE910C1_EUX {
@@ -67,27 +76,26 @@ class Modem : public LE910C1_EUX {
 			SCFGEXT(1, 1, false, 0, false, false);
 
 			// ----------------------------------------------------------------
-			// 5. Open WebSocket connection
+			// 5. Open WebSocket connection (ws:// or wss://)
 			// ----------------------------------------------------------------
-			Serial.print(F("Connecting to ws://"));
+			Serial.print(WS_USE_SSL ? F("Connecting wss://") : F("Connecting ws://"));
 			Serial.print(F(WS_HOST));
-			Serial.print(F(WS_PATH));
-			Serial.println();
+			Serial.println(F(WS_PATH));
 
-			if (!WSOPEN(1, WS_HOST, WS_PORT, WS_PATH)) {
+			if (!WSOPEN(1, WS_HOST, WS_PORT, WS_PATH, WS_USE_SSL)) {
 				Serial.println(F("WSOPEN failed"));
 				return;
 			}
 			Serial.println(F("WebSocket connected"));
 
 			// ----------------------------------------------------------------
-			// 6. Send a JSON message
+			// 6. Send a JSON message (payloads up to 65535 bytes supported)
 			// ----------------------------------------------------------------
 			const char * _Payload = "{\"type\":\"hello\",\"v\":1}";
 
-			if (!WSSEND(1, _Payload)) {
+			if (!WSSEND(1, _Payload, WS_USE_SSL)) {
 				Serial.println(F("WSSEND failed"));
-				WSCLOSE(1);
+				WSCLOSE(1, WS_USE_SSL);
 				return;
 			}
 			Serial.print(F("Sent: "));
@@ -96,15 +104,15 @@ class Modem : public LE910C1_EUX {
 			// ----------------------------------------------------------------
 			// 7. Receive server response
 			// ----------------------------------------------------------------
-			char _Buf[128] = {};
+			char _Buf[256] = {};
 			uint8_t _Opcode = 0;
 
-			if (WSRECV(1, _Buf, sizeof(_Buf), _Opcode)) {
+			if (WSRECV(1, _Buf, sizeof(_Buf), _Opcode, WS_USE_SSL)) {
 
 				if (_Opcode == _WS_OPCODE_PING_) {
-					// Server sent a keepalive ping — must reply with pong (RFC 6455 §5.5.2)
-					WSPONG(1);
-					Serial.println(F("Server ping → pong sent"));
+					// Server sent keepalive ping — must reply with pong (RFC 6455 §5.5.2)
+					WSPONG(1, WS_USE_SSL);
+					Serial.println(F("Server ping -> pong sent"));
 
 				} else if (_Opcode == _WS_OPCODE_TEXT_ || _Opcode == _WS_OPCODE_BINARY_) {
 					Serial.print(F("Received: "));
@@ -114,14 +122,14 @@ class Modem : public LE910C1_EUX {
 			}
 
 			// ----------------------------------------------------------------
-			// 8. Ping / pong keepalive (client-initiated)
+			// 8. Client-initiated ping / pong keepalive
 			// ----------------------------------------------------------------
-			if (WSPING(1)) {
+			if (WSPING(1, WS_USE_SSL)) {
 
 				memset(_Buf, '\0', sizeof(_Buf));
 				_Opcode = 0;
 
-				if (WSRECV(1, _Buf, sizeof(_Buf), _Opcode) && _Opcode == _WS_OPCODE_PONG_) {
+				if (WSRECV(1, _Buf, sizeof(_Buf), _Opcode, WS_USE_SSL) && _Opcode == _WS_OPCODE_PONG_) {
 					Serial.println(F("Pong received"));
 				}
 
@@ -130,7 +138,7 @@ class Modem : public LE910C1_EUX {
 			// ----------------------------------------------------------------
 			// 9. Close WebSocket connection
 			// ----------------------------------------------------------------
-			WSCLOSE(1);
+			WSCLOSE(1, WS_USE_SSL);
 			Serial.println(F("WebSocket closed"));
 
 		}

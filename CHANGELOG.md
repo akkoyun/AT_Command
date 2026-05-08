@@ -12,7 +12,21 @@ All notable changes to this project will be documented in this file. The format 
 
 ---
 
-## [02.01.01] - 2026-05-08
+## [02.02.00] - 2026-05-09
+
+### Added
+
+- WSS (`wss://`) support: all 6 WebSocket functions (`WSOPEN`, `WSSEND`, `WSRECV`, `WSPING`, `WSPONG`, `WSCLOSE`) accept a new `_SSL = false` default parameter. When `true`, the functions use `AT#SSLD` / `AT#SSLSEND` / `AT#SSLRECV` / `AT#SSLH` instead of their plain-TCP equivalents. SSL is configured with cipher-suite auto-negotiation and no certificate verification (`authMode=0`) suitable for IoT devices.
+- Extended WebSocket payload length: `WSSEND` now supports payloads up to 65535 bytes by encoding the 16-bit extended length field (`0xFE` + 2-byte big-endian) when payload > 125 bytes. `WSRECV` parses both 7-bit and 16-bit server-frame length fields.
+- SSL timeout constants in `Config.h`: `_TIMEOUT_SSLCFG_` (1 s), `_TIMEOUT_SSLSECCFG_` (1 s), `_TIMEOUT_SSLD_` (65 s), `_TIMEOUT_SSLH_` (5 s).
+
+### Changed
+
+- `WSSEND`: removed the 125-byte payload limit (was an artificial restriction).
+
+---
+
+## [02.01.01] - 2026-05-09
 
 ### Fixed
 
