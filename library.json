@@ -1,6 +1,6 @@
 {
 	"name": "AT_Command",
-	"version": "02.00.01",
+	"version": "2.0.1",
 	"keywords": "AT, Command, AT_Command, Telit, 2G, 3G, 4G, LTE, GSM, GPRS, LTE-M, NB-IoT, LE910C1, GE910, AT, FCLASS, CGMI, CGMM, SWPKGV, CGSN, CFUN, CMEE, CEER, ATE, CPIN, CCID, SIMDET, GPIO, SLED, SLEDSAV, E2SLRI, CREG, CGDCONT, SGACT, WS46, RFSTS, SCFG, SCFGEXT, SCFGEXT2, SCFGEXT3, FRWL, ICMP, Ping, CCLK, CTZU, NITZ, CCLKMODE, ATSD, SH, SL, SA, SS, SO, SI, SSEND, SRECV, FTPCLOSE, FTPCWD, FTPFSIZE, FTPGETPKT, FTPOPEN, FTPRECV, FTPTO, FTPTYPE, Z, SHDN, Modem, SIM",
 	"description": "AT Command Library for Telit GSM/LTE modules (LE910C1-EUX, GE910 series). Provides a type-safe, memory-efficient C++ interface to AT commands for network registration, TCP/IP sockets, HTTP, FTP, and modem management.",
 	"authors":
