@@ -4,7 +4,7 @@
  *
  *	Library				: AT_Command
  *	Code Developer		: Mehmet Gunce Akkoyun (akkoyun@me.com)
- *	Version				: 02.02.00
+ *	Version				: 02.02.01
  *
  *********************************************************************************/
 
@@ -3043,8 +3043,12 @@
 				GSM_Serial->write(0x0D);
 				GSM_Serial->write(0x0A);
 
+				// Bound the IO buffer to the requested byte count + header overhead so
+				// memcpy never writes more bytes into _Data than the caller allocated.
+				const uint16_t _BufSize = (_Size + 30 < _IO_Buffer_Size) ? _Size + 30 : _IO_Buffer_Size;
+
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPRECV_, 1024};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_FTPRECV_, _BufSize};
 
 				this->Read_UART_Buffer(&_Buffer);
 

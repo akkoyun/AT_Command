@@ -12,6 +12,14 @@ All notable changes to this project will be documented in this file. The format 
 
 ---
 
+## [02.02.01] - 2026-05-09
+
+### Fixed
+
+- `FTPRECV`: IO buffer size was hardcoded to 1024 bytes regardless of the `_Size` parameter passed to `AT#FTPRECV`. This caused `memcpy` to copy up to 1022 bytes into the caller's buffer even when the caller requested fewer bytes, leading to a buffer overflow for small `_Data` allocations. Buffer size is now computed as `_Size + 30` (data + header/footer overhead) capped at `_IO_Buffer_Size`.
+
+---
+
 ## [02.02.00] - 2026-05-09
 
 ### Added
