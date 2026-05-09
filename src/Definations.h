@@ -3,7 +3,7 @@
  *	distributed without the express permission of Mehmet Gunce Akkoyun.
  *
  *	Library				: AT_Command
- *	Version				: 02.02.01
+ *	Version				: 02.02.03
  *
  *********************************************************************************/
 

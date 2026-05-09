@@ -4,7 +4,7 @@
  *
  *	Library				: AT_Command
  *	Code Developer		: Mehmet Gunce Akkoyun (akkoyun@me.com)
- *	Version				: 02.02.01
+ *	Version				: 02.02.03
  *
  *********************************************************************************/
 
@@ -30,8 +30,7 @@
 			Stream * GSM_Serial;
 
 			// Shared IO buffer — single allocation, reused by every AT command function.
-			// Moves all large per-call stack allocations to the object instance instead.
-			static constexpr uint16_t _IO_Buffer_Size = 1024;
+			// Size is user-overridable via _IO_Buffer_Size in Config.h (default 1024).
 			char _IO_Buffer[_IO_Buffer_Size];
 
 			// Serial Buffer Variable Structure Definition
@@ -90,8 +89,6 @@
 					// (preserves Read_Order at the last matched byte index)
 					if (!_Buffer->Response) {
 						if (isAscii(_IO_Buffer[_Buffer->Read_Order])) _Buffer->Read_Order++;
-						if (_IO_Buffer[_Buffer->Read_Order] == '\r') _Buffer->Read_Order++;
-						if (_IO_Buffer[_Buffer->Read_Order] == '\n') _Buffer->Read_Order++;
 
 						// Prevent buffer overflow
 						if (_Buffer->Read_Order >= _Limit - 1) break;
@@ -126,18 +123,22 @@
 				// Read UART Response
 				while (!_Buffer->Response) {
 
-					// Read Serial Char
-					_IO_Buffer[_Buffer->Read_Order] = GSM_Serial->read();
+					// Only process real bytes; read() returns -1 when buffer is empty
+					const int _Byte = GSM_Serial->read();
+					if (_Byte >= 0) {
 
-					// Control for Response
-					if (this->Find(_AT_OK_,    _IO_Buffer, _Buffer->Read_Order)) _Buffer->Response = _AT_OK_;
-					if (this->Find(_AT_ERROR_, _IO_Buffer, _Buffer->Read_Order)) _Buffer->Response = _AT_ERROR_;
-					if (this->Find(_AT_CME_,   _IO_Buffer, _Buffer->Read_Order)) _Buffer->Response = _AT_CME_;
+						// Store byte and check for terminal patterns
+						_IO_Buffer[_Buffer->Read_Order] = (char)_Byte;
+						if (this->Find(_AT_OK_,    _IO_Buffer, _Buffer->Read_Order)) _Buffer->Response = _AT_OK_;
+						if (this->Find(_AT_ERROR_, _IO_Buffer, _Buffer->Read_Order)) _Buffer->Response = _AT_ERROR_;
+						if (this->Find(_AT_CME_,   _IO_Buffer, _Buffer->Read_Order)) _Buffer->Response = _AT_CME_;
 
-					// Advance for every byte regardless of value
-					if (!_Buffer->Response) {
-						_Buffer->Read_Order++;
-						if (_Buffer->Read_Order >= _Limit - 1) break;
+						// Advance for every real byte regardless of ASCII value
+						if (!_Buffer->Response) {
+							_Buffer->Read_Order++;
+							if (_Buffer->Read_Order >= _Limit - 1) break;
+						}
+
 					}
 
 					// Handle for timeout
@@ -181,18 +182,13 @@
 						(_Buffer[_Size    ] == '\n')
 					) return(true);
 
-				} else if (_Type == _AT_CME_ && _Size > 15) {
+				} else if (_Type == _AT_CME_ && _Size > 1) {
 
-					// \r\n+CME ERROR: nnn\r\n
+					// \r\n+CME ERROR: N\r\n  (N = 1–3 digit code)
 					if (
-						(_Buffer[_Size - 18] == '\r') &&
-						(_Buffer[_Size - 17] == '\n') &&
-						(_Buffer[_Size - 16] == '+' ) &&
-						(_Buffer[_Size - 15] == 'C' ) &&
-						(_Buffer[_Size - 14] == 'M' ) &&
-						(_Buffer[_Size - 13] == 'E' ) &&
-						(_Buffer[_Size - 1 ] == '\r') &&
-						(_Buffer[_Size     ] == '\n')
+						(_Buffer[_Size - 1] == '\r') &&
+						(_Buffer[_Size    ] == '\n') &&
+						strstr(_Buffer, "+CME ERROR:") != NULL
 					) return(true);
 
 				} else if (_Type == _AT_SD_PROMPT_ && _Size > 2) {
@@ -284,7 +280,9 @@
 			// Callback Function Definition
 			typedef void (*Callback_JSON_Parse)(uint8_t);
 
-			// AT Command
+			// AT — Attention (modem alive check)
+			// --> AT\r\n
+			// <-- \r\nOK\r\n
 			bool AT(void) {
 
 				// Clear UART Buffer
@@ -308,7 +306,9 @@
 
 			}
 
-			// Set Connection Mode Function
+			// AT+FCLASS — Connection Mode (0=data, 8=fax)
+			// --> AT+FCLASS=<n>\r\n
+			// <-- \r\nOK\r\n
 			bool FCLASS(const uint8_t _FCLASS = 0) {
 
 				// Control for Parameter
@@ -336,7 +336,9 @@
 
 			}
 
-			// Get Manufacturer Function
+			// AT+CGMI — Manufacturer Identification
+			// --> AT+CGMI\r\n
+			// <-- \r\n<manufacturer>\r\n\r\nOK\r\n
 			bool CGMI(uint8_t & _Manufacturer) {
 
 				// Clear UART Buffer
@@ -391,7 +393,9 @@
 
 			}
 
-			// Get Model Function
+			// AT+CGMM — Model Identification
+			// --> AT+CGMM\r\n
+			// <-- \r\n<model>\r\n\r\nOK\r\n
 			bool CGMM(uint8_t & _Model) {
 
 				// Clear UART Buffer
@@ -445,7 +449,9 @@
 
 			}
 
-			// Get Firmware Function
+			// AT#SWPKGV — Software Package Version
+			// --> AT#SWPKGV\r\n
+			// <-- \r\n<fw_ver>\r\n<sub1>\r\n<sub2>\r\n<sub3>\r\n\r\nOK\r\n
 			bool SWPKGV(char * _Firmware) {
 
 				/**
@@ -493,7 +499,9 @@
 
 			}
 
-			// Get IMEI Function
+			// AT+CGSN — IMEI Serial Number
+			// --> AT+CGSN=1\r\n
+			// <-- \r\n+CGSN: <imei>\r\n\r\nOK\r\n
 			bool CGSN(char * _IMEI) {
 
 				/**
@@ -551,7 +559,9 @@
 
 			}
 
-			// Set Power Mode Function
+			// AT+CFUN — Phone Functionality (0=min, 1=full, 4=airplane)
+			// --> AT+CFUN=<fun>\r\n
+			// <-- \r\nOK\r\n
 			bool CFUN(const uint8_t _Fun) {
 
 				// Clear UART Buffer
@@ -576,7 +586,9 @@
 
 			}
 
-			// Set CMEE Function
+			// AT+CMEE — Extended Error Reporting (0=off, 1=numeric, 2=verbose)
+			// --> AT+CMEE=<n>\r\n
+			// <-- \r\nOK\r\n
 			bool CMEE(const uint8_t _CMEE = 1) {
 
 				// Control for Parameter
@@ -604,7 +616,9 @@
 
 			}
 
-			// Get Error Code Function
+			// AT#CEER — Extended Error Report (Telit proprietary numeric code)
+			// --> AT#CEER\r\n
+			// <-- \r\n#CEER: <code>\r\n\r\nOK\r\n
 			bool CEER(uint16_t & _Code) {
 
 				// Clear UART Buffer
@@ -660,7 +674,9 @@
 
 			}
 
-			// ATE Command
+			// ATE — Command Echo (0=off, 1=on)
+			// --> ATE<n>\r\n
+			// <-- \r\nOK\r\n
 			bool ATE(const bool _ECHO = false) {
 
 				// Clear UART Buffer
@@ -685,7 +701,9 @@
 
 			}
 
-			// Flow Control Function
+			// AT&K — Flow Control (0=none, 3=RTS/CTS, 4=XOFF/XON)
+			// --> AT&K<n>\r\n
+			// <-- \r\nOK\r\n
 			bool K(const uint8_t _K = 0) {
 
 				// Clear UART Buffer
@@ -710,7 +728,9 @@
 
 			}
 
-			// Get SIM PIN Status Function
+			// AT+CPIN — SIM PIN Status
+			// --> AT+CPIN?\r\n
+			// <-- \r\n+CPIN: READY|SIM PIN|SIM PUK\r\n\r\nOK\r\n
 			bool CPIN(uint8_t & _Code) {
 
 				// Clear UART Buffer
@@ -744,7 +764,7 @@
 					memset(_PIN_Response, '\0', 10);
 
 					// Handle Variables
-					if (sscanf(_IO_Buffer, "\r\n+CPIN: %09s\r\n\r\nOK\r\n", _PIN_Response) != 1) return false;
+					if (sscanf(_IO_Buffer, "\r\n+CPIN: %09[^\r]\r\n\r\nOK\r\n", _PIN_Response) != 1) return false;
 
 					// Control for SIM State
 					if (strstr(_PIN_Response, "READY")) _Code = _SIM_READY_;
@@ -762,7 +782,9 @@
 
 			}
 
-			// Get ICCID Function
+			// AT#CCID — SIM Card ICCID (20-digit serial number)
+			// --> AT#CCID\r\n
+			// <-- \r\n#CCID: <iccid>\r\n\r\nOK\r\n
 			bool CCID(char * _ICCID) {
 
 				// Clear UART Buffer
@@ -793,7 +815,7 @@
 					memset(_ICCID, '\0', 21);
 
 					// Handle for Response
-					for (uint8_t i = 0; i < _Buffer.Size; i++) {
+					for (uint8_t i = 0; i < _Buffer.Size && _Buffer.Data_Order < 20; i++) {
 
 						// Handle ICCID
 						if (isdigit(_IO_Buffer[i])) {
@@ -815,7 +837,9 @@
 
 			}
 
-			// SIMDET Function
+			// AT#SIMDET — SIM Detection (SET: mode=0..2; GET: returns mode,presence)
+			// --> AT#SIMDET=<mode>\r\n  /  AT#SIMDET?\r\n
+			// <-- \r\nOK\r\n  /  \r\n#SIMDET: <mode>,<state>\r\n\r\nOK\r\n
 			bool SIMDET(const bool _Function_Type, uint8_t _Mode, bool & _SIM_in_Pin_State) {
 
 				// SET Function
@@ -902,7 +926,9 @@
 
 			}
 
-			// Set GPIO Function
+			// AT#GPIO — GPIO Pin Control (pin=1..14, mode=0/1, dir=0/1/2)
+			// --> AT#GPIO=<pin>,<mode>,<dir>\r\n
+			// <-- \r\nOK\r\n
 			bool GPIO(const bool _Function_Type = _AT_SET_, const uint8_t _Pin = 1, const uint8_t _Mode = 0, const uint8_t _Direction = 2) {
 
 				// SET Function
@@ -939,7 +965,9 @@
 
 			}
 
-			// Set SLED Function
+			// AT#SLED — Status LED Behaviour (0=off, 1=on, 2=network-blink, 3=software)
+			// --> AT#SLED=<n>\r\n
+			// <-- \r\nOK\r\n
 			bool SLED(const uint8_t _SLED = 2) {
 
 				// Clear UART Buffer
@@ -964,7 +992,9 @@
 
 			}
 
-			// Execution command saves STAT_LED setting in NVM.
+			// AT#SLEDSAV — Save SLED Setting to NVM
+			// --> AT#SLEDSAV\r\n
+			// <-- \r\nOK\r\n
 			bool SLEDSAV(void) {
 
 				// Clear UART Buffer
@@ -988,7 +1018,9 @@
 
 			}
 
-			// Set Socket Listen Ring Indicator Function
+			// AT#E2SLRI — Socket/Server Ring Indicator Pulse Duration (50..1150 ms)
+			// --> AT#E2SLRI=<ms>\r\n
+			// <-- \r\nOK\r\n
 			bool E2SLRI(const uint16_t _Pulse_Duration = 50) {
 
 				// Control for Parameter
@@ -1016,7 +1048,10 @@
 
 			}
 
-			// CREG Function
+			// AT+CREG — Network Registration Status
+			// --> AT+CREG=<mode>\r\n  /  AT+CREG?\r\n
+			// <-- \r\nOK\r\n  /  \r\n+CREG: <mode>,<stat>\r\n\r\nOK\r\n
+			// stat: 0=not-reg, 1=home, 2=searching, 3=denied, 5=roaming
 			bool CREG(const bool _Function_Type, uint8_t & _Mode, uint8_t & _Stat) {
 
 				// SET Function
@@ -1081,7 +1116,9 @@
 
 			}
 
-			// Set CGDCONT Function
+			// AT+CGDCONT — PDP Context Definition (cid=1..6, type="IP"|"IPV6", apn=string)
+			// --> AT+CGDCONT=<cid>,"<type>","<apn>"\r\n
+			// <-- \r\nOK\r\n
 			bool CGDCONT(const uint8_t _Cid, const char * _PDP_Type, const char * _APN) {
 
 				// Clear UART Buffer
@@ -1111,7 +1148,9 @@
 
 			}
 
-			// Set SGACT Function
+			// AT#SGACT — PDP Context Activation / Deactivation
+			// --> AT#SGACT=<cid>,<stat>\r\n  (stat: 0=deactivate, 1=activate)
+			// <-- \r\n#SGACT: <ip>\r\n\r\nOK\r\n
 			bool SGACT(const uint8_t _Cid, const bool _Stat, uint8_t _IP_Segment[4]) {
 
 				// Clear UART Buffer
@@ -1151,7 +1190,9 @@
 
 			}
 
-			// WS46 Function
+			// AT+WS46 — Wireless Data Service (network technology selection)
+			// --> AT+WS46?\r\n  /  AT+WS46=<mode>\r\n
+			// <-- \r\n+WS46: <mode>\r\n\r\nOK\r\n  (12=2G, 22=3G, 25=4G, 29=2G+3G, 30=2G+4G, 31=all)
 			bool WS46(const bool _Function_Type, uint8_t & _Mode) {
 
 				// GET Function
@@ -1228,7 +1269,9 @@
 
 			}
 
-			// RFSTS Function
+			// AT#RFSTS — Radio/Network Status (PLMN, frequency, signal, TAC, CellID)
+			// --> AT#RFSTS\r\n
+			// <-- \r\n#RFSTS: "<MCC MNC>",<EARFCN>,<RSRP>,<RSSI>,<RSRQ>,<TAC>,,<TXPWR>,...,<CID>,...\r\n\r\nOK\r\n
 			bool RFSTS(const uint8_t _Connection_Type, uint16_t & _MCC, uint16_t & _MNC, uint16_t & _RSSI, uint8_t & _Signal_Level, uint16_t & _TAC, uint32_t & _CID) {
 
 				// Control for Connection Type
@@ -1322,7 +1365,10 @@
 
 			}
 
-			// Signal Quality Function
+			// AT+CSQ — Signal Quality Report (3GPP TS 27.007 §8.5)
+			// --> AT+CSQ\r\n
+			// <-- \r\n+CSQ: <rssi>,<ber>\r\n\r\nOK\r\n
+			// rssi: 0=≤-113dBm, 1=-111, 2..30=-109+(n-2)*2, 31=-51, 99=unknown
 			bool CSQ(uint16_t & _RSSI) {
 
 				// Clear UART Buffer
@@ -1337,7 +1383,7 @@
 				GSM_Serial->write(0x0A);
 
 				// Declare Buffer Object
-				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CSQ_, 7};
+				Serial_Buffer _Buffer = {_AT_TIMEOUT_, 0, 0, _TIMEOUT_CSQ_, 25};
 
 				this->Read_UART_Buffer(&_Buffer);
 
@@ -1358,7 +1404,7 @@
 					// 0→-113, 1→-111, 2..30→-109+(n-2)*2, 31→-51, 99=unknown
 					if (_CSQ == 0) _RSSI = 113;
 					else if (_CSQ == 1) _RSSI = 111;
-					else if (_CSQ <= 30) _RSSI = 109 - (_CSQ * 2);
+					else if (_CSQ <= 30) _RSSI = 113 - (_CSQ * 2);
 					else if (_CSQ == 31) _RSSI = 51;
 					else if (_CSQ == 99) _RSSI = 0;
 
@@ -1372,7 +1418,9 @@
 
 			}
 
-			// Socket Configuration Function
+			// AT#SCFG — Socket Configuration (pktSz=0..1500, maxTo=0..65535 s, connTo=10..1200 s, txTo=0..255)
+			// --> AT#SCFG=<connID>,<cid>,<pktSz>,<maxTo>,<connTo>,<txTo>\r\n
+			// <-- \r\nOK\r\n
 			bool SCFG(const uint8_t _Conn_ID, const uint8_t _Cid, const uint16_t _Pkt_Sz, const uint16_t _Max_To, const uint16_t _Conn_To, const uint8_t _TX_To) {
 
 				// Clear UART Buffer
@@ -1407,7 +1455,9 @@
 
 			}
 
-			// Extended Socket Configuration Function
+			// AT#SCFGEXT — Extended Socket Configuration (srMode=0..2, recvDataMode=0/1, keepAlive=0..240, listenAutoRsp=0/1, sendDataMode=0/1)
+			// --> AT#SCFGEXT=<connID>,<srMode>,<recvDataMode>,<keepAlive>,<listenAutoRsp>,<sendDataMode>\r\n
+			// <-- \r\nOK\r\n
 			bool SCFGEXT(const uint8_t _Conn_ID, const uint8_t _Sr_Mode, const bool _Recv_Data_Mode, const uint8_t _Keep_Alive, const bool _Listen_Auto_Rsp, const bool _Send_Data_Mode) {
 
 				// Clear UART Buffer
@@ -1442,7 +1492,9 @@
 
 			}
 
-			// Extended 2 Socket Configuration Function
+			// AT#SCFGEXT2 — Extended Socket Configuration 2 (bufferStart=0/1, abortConn=0/1, noCarrierMode=0/1)
+			// --> AT#SCFGEXT2=<connID>,<bufStart>,<abortConn>,0,0,<noCarrierMode>\r\n
+			// <-- \r\nOK\r\n
 			bool SCFGEXT2(const uint8_t _Conn_ID, const bool _Buffer_Start, const bool _Abort_Conn_Attempt, const uint8_t _No_Carrier_Mode) {
 
 				// Clear UART Buffer
@@ -1477,7 +1529,9 @@
 
 			}
 
-			// Extended 3 Socket Configuration Function
+			// AT#SCFGEXT3 — Extended Socket Configuration 3 (immRsp=0/1, closureType=0/1, fastSring=0/1, lingerTime=0..255, udpMode=0/1, ssendTimeout=0/1)
+			// --> AT#SCFGEXT3=<connID>,<immRsp>,<closureType>,<fastSring>,<lingerTime>,<udpMode>,<ssendTimeout>\r\n
+			// <-- \r\nOK\r\n
 			bool SCFGEXT3(const uint8_t _Conn_ID, const bool _immRsp, const bool _Closure_Type, const bool _Fast_Sring, const uint8_t _Linger_Time, const uint8_t _UDP_Socket_Mode, const bool _SSend_Timeout) {
 
 				// Clear UART Buffer
@@ -1514,7 +1568,9 @@
 
 			}
 
-			// Firewall Add/Remove Function
+			// AT#FRWL — Firewall Rule (action: 0=add, 1=remove, 2=removeAll; ip=dotted-decimal)
+			// --> AT#FRWL=<action>[,"<ip>","<mask>"]\r\n
+			// <-- \r\nOK\r\n
 			bool FRWL(const bool _Function_Type, const uint8_t _Action, const char *_IP_Addr) {
 
 				// SET Function
@@ -1554,7 +1610,9 @@
 
 			}
 
-			// Ping Enable/Disable Function
+			// AT#ICMP — ICMP Ping Enable (0=off, 1=on, 2=on+unsolicited)
+			// --> AT#ICMP=<mode>\r\n
+			// <-- \r\nOK\r\n
 			bool ICMP(const uint8_t _Mode = 2) {
 
 				// Clear UART Buffer
@@ -1579,7 +1637,9 @@
 
 			}
 
-			// Ping Function
+			// AT#PING — ICMP Ping (1 packet, returns round-trip time in ms)
+			// --> AT#PING="<ip>",1\r\n
+			// <-- \r\n#PING: 01,"<ip>",0,<time>\r\n\r\nOK\r\n
 			bool Ping(const char * _IP, uint16_t & _Time) {
 
 				// Clear UART Buffer
@@ -1622,7 +1682,9 @@
 
 			}
 
-			// Get Clock Function
+			// AT+CCLK — Real-Time Clock (timezone in quarter-hours, sign ±)
+			// --> AT+CCLK?\r\n
+			// <-- \r\n+CCLK: "YY/MM/DD,HH:MM:SS±ZZ"\r\n\r\nOK\r\n
 			bool CCLK(uint8_t & _Year, uint8_t & _Month, uint8_t & _Day, uint8_t & _Hour, uint8_t & _Minute, uint8_t & _Second, uint8_t & _Time_Zone) {
 
 				// Clear UART Buffer
@@ -1671,7 +1733,9 @@
 
 			}
 
-			// Enable or Disable Automatic TimeZone Update Function
+			// AT+CTZU — Automatic Time Zone Update (0=off, 1=on)
+			// --> AT+CTZU=<n>\r\n
+			// <-- \r\nOK\r\n
 			bool CTZU(const bool _State = 1) {
 
 				// Clear UART Buffer
@@ -1696,7 +1760,9 @@
 
 			}
 
-			// Enable or Disable Network Time UnSolicited Function
+			// AT#NITZ — Network Time Unsolicited (val: bitmask 1=time 2=dst 4=tz; mode=0/1)
+			// --> AT#NITZ=<val>,<mode>\r\n
+			// <-- \r\nOK\r\n
 			bool NITZ(const uint8_t _Val = 1, const bool _Mode = 1) {
 
 				// Clear UART Buffer
@@ -1723,7 +1789,9 @@
 
 			}
 
-			// Enable the local time or the UTC time.
+			// AT#CCLKMODE — Clock Mode (0=UTC, 1=local time)
+			// --> AT#CCLKMODE=<n>\r\n
+			// <-- \r\nOK\r\n
 			bool CCLKMODE(const bool _Mode = 0) {
 
 				// Clear UART Buffer
@@ -1748,7 +1816,9 @@
 
 			}
 
-			// Set Maximum TCP Window Size
+			// AT#TCPMAXWIN — Maximum TCP Window Size (winSize=0..65535, scaleFactor=0..14)
+			// --> AT#TCPMAXWIN=<winSize>,<scaleFactor>\r\n
+			// <-- \r\nOK\r\n
 			bool TCPMAXWIN(const uint16_t _WinSize = 0, const uint8_t _ScaleFactor = 0) {
 
 				// Clear UART Buffer
@@ -1775,7 +1845,9 @@
 
 			}
 
-			// Socket Dial Function
+			// AT#SD — Socket Dial (TCP/UDP connection; connMode=0=online, 1=command)
+			// --> AT#SD=<connID>,<proto>,<port>,"<ip>",<closureType>,<iPort>,<connMode>\r\n
+			// <-- \r\nOK\r\n  (connMode=1) | CONNECT (connMode=0)
 			bool ATSD(const uint8_t _Cid, const bool _Protocol, const char *_IP, const uint8_t _Port, const uint8_t _Closure_Type, uint16_t _IPort, const bool _Conn_Mode) {
 
 				// Clear UART Buffer
@@ -1812,7 +1884,9 @@
 
 			}
 
-			// Close Socket Function
+			// AT#SH — Socket Close (hang up; closes TCP/UDP socket in command mode)
+			// --> AT#SH=<connID>\r\n
+			// <-- \r\nOK\r\n
 			bool SH(const uint8_t _ConnID) {
 
 				// Clear UART Buffer
@@ -1837,7 +1911,9 @@
 
 			}
 
-			// Socket Listen Function
+			// AT#SL — Socket Listen (listenState=0/1; closureType=0=no-autoclose)
+			// --> AT#SL=<connID>,<listenState>,<listenPort>,<closureType>\r\n
+			// <-- \r\nOK\r\n
 			bool SL(const uint8_t _ConnID, const bool _Listen_State, const uint16_t _Listen_Port, const uint8_t _Closure_Type) {
 
 				// Clear UART Buffer
@@ -1868,7 +1944,9 @@
 
 			}
 
-			// Socket Answer Function
+			// AT#SA — Socket Accept (accept incoming connection on a listening socket)
+			// --> AT#SA=<connID>,<connMode>\r\n
+			// <-- \r\nOK\r\n\r\nSRING: <connID>,<dataLen>\r\n
 			bool SA(const uint8_t _ConnID, const uint8_t _ConnMode, uint16_t & _Length) {
 
 				// Clear UART Buffer
@@ -1895,7 +1973,9 @@
 
 			}
 
-			// Socket Status Function
+			// AT#SS — Socket Status (0=closed, 1=listen, 2=established, 3=active, 4=remote-closed, 5=idle)
+			// --> AT#SS=<connID>\r\n
+			// <-- \r\n#SS: <connID>,<state>[,<remoteIP>,<remotePort>[,<localIP>,<localPort>]]\r\n\r\nOK\r\n
 			bool SS(const uint8_t _ConnID, uint8_t & _State) {
 
 				// Clear UART Buffer
@@ -1935,7 +2015,9 @@
 
 			}
 
-			// ReOpen Socket Function
+			// AT#SO — Socket Reopen (re-establishes a previously configured connection)
+			// --> AT#SO=<connID>\r\n
+			// <-- \r\nOK\r\n
 			bool SO(const uint8_t _ConnID) {
 
 				// Clear UART Buffer
@@ -1960,7 +2042,9 @@
 
 			}
 
-			// Socket Info Function
+			// AT#SI — Socket Info (bytes sent/received/buffered/unread)
+			// --> AT#SI=<connID>\r\n
+			// <-- \r\n#SI: <connID>,<txBytes>,<rxBytes>,<buffered>,<unread>\r\n\r\nOK\r\n
 			bool SI(const uint8_t _ConnID, uint16_t & _Data_Buffer) {
 
 				// Clear UART Buffer
@@ -1998,7 +2082,9 @@
 
 			}
 
-			// Socket Inactivity Timeout Function
+			// AT#SKTTO — Socket Inactivity Timeout (0=never, 1..65535 s)
+			// --> AT#SKTTO=<timeout>\r\n
+			// <-- \r\nOK\r\n
 			bool SKTTO(const uint16_t _TimeOut = 90) {
 
 				// Clear UART Buffer
@@ -2023,7 +2109,9 @@
 
 			}
 
-			// Socket Pack Send Function
+			// AT#SSEND — Socket Send Data (callback variant: builds HTTP payload via callback)
+			// --> AT#SSEND=<connID>\r\n  -->  > <payload> <Ctrl-Z>
+			// <-- \r\n> \r\nOK\r\n
 			bool SSEND(Callback_JSON_Parse _Parser, uint8_t _Pack_Type) {
 
 				// Clear UART Buffer
@@ -2072,6 +2160,9 @@
 				return (false);
 
 			}
+			// AT#SSEND — Socket Send Data (HTTP method + payload via config-server macros)
+			// --> AT#SSEND=<connID>\r\n  -->  > <HTTP-header><payload> <Ctrl-Z>
+			// <-- \r\n> \r\nOK\r\n
 			bool SSEND(const uint8_t _ConnID, const uint8_t _Method, const char * _Data_Pack) {
 
 				// Clear UART Buffer
@@ -2150,6 +2241,9 @@
 				return (false);
 
 			}
+			// AT#SSEND — Socket Send Data (HTTP method + payload with explicit server/endpoint)
+			// --> AT#SSEND=<connID>\r\n  -->  > <HTTP-header><payload> <Ctrl-Z>
+			// <-- \r\n> \r\nOK\r\n
 			bool SSEND(const uint8_t _ConnID, const uint8_t _Method, const char * _Server, const char * _EndPoint, const char * _Data_Pack) {
 
 				// Clear UART Buffer
@@ -2230,7 +2324,9 @@
 
 			}
 
-			// Socket Recieve Function
+			// AT#SRECV — Socket Receive (reads up to maxByte bytes from socket buffer)
+			// --> AT#SRECV=<connID>,<maxByte>\r\n
+			// <-- \r\n#SRECV: <connID>,<recvBytes>\r\n<data>\r\nOK\r\n
 			bool SRECV(const uint8_t _ConnID, const uint16_t _MaxByte, char * _Data) {
 
 				// Clear UART Buffer
@@ -2263,7 +2359,8 @@
 
 			}
 
-			// Detect SRING Response.
+			// SRING — Unsolicited Socket Ring Indicator with data length (blocking poll, 50 s)
+			// <-- \r\nSRING: <connID>,<dataLen>\r\n  (or  \r\nOK\r\n\r\nSRING: ...\r\n after SA)
 			bool SRING(uint16_t &_Length) {
 
 				// Declare Buffer Object
@@ -2402,6 +2499,8 @@
 				return(false);
 
 			}
+			// SRING — Unsolicited Socket Ring Indicator (1 s poll, returns true if SRING seen)
+			// <-- \r\nSRING: <connID>,<dataLen>\r\n
 			bool SRING(void) {
 
 				// Declare Buffer Object
@@ -2445,8 +2544,10 @@
 
 			}
 
-			// WebSocket Open Function — HTTP/1.1 Upgrade handshake over plain TCP or TLS (RFC 6455 §4.1).
-			// Pass _SSL=true for wss:// (AT#SSLD, no certificate verification by default).
+			// AT#SD / AT#SSLD — WebSocket Open (HTTP/1.1 Upgrade handshake, RFC 6455 §4.1)
+			// --> AT#SD=<id>,0,<port>,"<host>",255,0,1\r\n  (plain) | AT#SSLD=... (TLS)
+			// --> AT#SSEND=<id>\r\n  > GET <path> HTTP/1.1\r\nUpgrade: websocket\r\n...\r\n <Ctrl-Z>
+			// <-- \r\nOK\r\n  then polls AT#SRECV for 101 Switching Protocols
 			bool WSOPEN(const uint8_t _ConnID, const char * _Host, const uint16_t _Port, const char * _Path, const bool _SSL = false) {
 
 				// Step 1 — Open transport layer
@@ -2575,9 +2676,10 @@
 
 			}
 
-			// WebSocket Send Function — sends a masked text frame (RFC 6455 §5.2).
-			// Supports payloads up to 65535 bytes via 16-bit extended length field.
-			// Masking key is chosen so no wire byte equals 0x1A (AT#SSEND/SSLSEND terminator).
+			// AT#SSEND / AT#SSLSEND — WebSocket Send (masked text frame, RFC 6455 §5.2)
+			// --> AT#SSEND=<id>\r\n  > 0x81 <len> <mask[4]> <masked-payload> <Ctrl-Z>
+			// <-- \r\n> \r\nOK\r\n
+			// Supports 7-bit (≤125 B) and 16-bit extended length (126..65535 B).
 			bool WSSEND(const uint8_t _ConnID, const char * _Data, const bool _SSL = false) {
 
 				const uint16_t _Len = (uint16_t)strlen(_Data);
@@ -2646,9 +2748,10 @@
 
 			}
 
-			// WebSocket Receive Function — reads one server frame, returns unmasked payload.
-			// Handles 7-bit and 16-bit extended length fields (RFC 6455 §5.2).
-			// Server-to-client frames are never masked (RFC 6455 §5.1).
+			// AT#SRECV / AT#SSLRECV — WebSocket Receive (one RFC 6455 §5.2 server frame)
+			// --> AT#SRECV=<id>,<maxLen+16>\r\n
+			// <-- \r\n#SRECV: <id>,<n>\r\n<frameHeader><payload>\r\nOK\r\n
+			// Parses 7-bit and 16-bit extended length; opcode returned in _Opcode.
 			bool WSRECV(const uint8_t _ConnID, char * _Data, const uint16_t _MaxLen, uint8_t & _Opcode, const bool _SSL = false) {
 
 				this->Clear_UART_Buffer();
@@ -2700,7 +2803,9 @@
 
 			}
 
-			// WebSocket Ping Function — sends RFC 6455 §5.5.2 masked ping control frame
+			// AT#SSEND / AT#SSLSEND — WebSocket Ping (masked ping control frame, RFC 6455 §5.5.2)
+			// --> AT#SSEND=<id>\r\n  > 0x89 0x80 <mask[4]> <Ctrl-Z>
+			// <-- \r\n> \r\nOK\r\n  (server must reply with a Pong frame)
 			bool WSPING(const uint8_t _ConnID, const bool _SSL = false) {
 
 				this->Clear_UART_Buffer();
@@ -2735,8 +2840,9 @@
 
 			}
 
-			// WebSocket Pong Function — sends RFC 6455 §5.5.3 masked pong control frame.
-			// Must be called when WSRECV returns opcode == _WS_OPCODE_PING_ (RFC 6455 §5.5.2 requires it).
+			// AT#SSEND / AT#SSLSEND — WebSocket Pong (masked pong reply, RFC 6455 §5.5.3)
+			// --> AT#SSEND=<id>\r\n  > 0x8A 0x80 <mask[4]> <Ctrl-Z>
+			// <-- \r\n> \r\nOK\r\n  (must call when WSRECV returns _WS_OPCODE_PING_)
 			bool WSPONG(const uint8_t _ConnID, const bool _SSL = false) {
 
 				this->Clear_UART_Buffer();
@@ -2771,7 +2877,9 @@
 
 			}
 
-			// WebSocket Close Function — sends RFC 6455 §5.5.1 masked close frame then closes the socket
+			// AT#SSEND / AT#SSLSEND — WebSocket Close (masked close frame + socket teardown, RFC 6455 §5.5.1)
+			// --> AT#SSEND=<id>\r\n  > 0x88 0x80 <mask[4]> <Ctrl-Z>
+			// <-- \r\n> \r\nOK\r\n  then AT#SH=<id>\r\n (plain) | AT#SSLH=<id>\r\n (TLS)
 			bool WSCLOSE(const uint8_t _ConnID, const bool _SSL = false) {
 
 				this->Clear_UART_Buffer();
@@ -2821,7 +2929,9 @@
 
 			}
 
-			// Manual DNS Selection Function
+			// AT#DNS — Manual DNS Server Selection
+			// --> AT#DNS=<connID>,"<primaryIP>","<secondaryIP>"\r\n
+			// <-- \r\nOK\r\n
 			bool DNS(const uint8_t _ConnID, const char * _Primary, const char * _Secondary) {
 
 				// Clear UART Buffer
@@ -2851,7 +2961,9 @@
 
 			}
 
-			// DNS Response Cache Function
+			// AT#CACHEDNS — DNS Response Cache (0=off, 1=on)
+			// --> AT#CACHEDNS=<mode>\r\n
+			// <-- \r\nOK\r\n
 			bool CACHEDNS(const bool _Mode) {
 
 				// Clear UART Buffer
@@ -2876,7 +2988,9 @@
 
 			}
 
-			// Close FTP Connection Function
+			// AT#FTPCLOSE — Close FTP Connection
+			// --> AT#FTPCLOSE\r\n
+			// <-- \r\nOK\r\n
 			bool FTPCLOSE(void) {
 
 				// Clear UART Buffer
@@ -2900,7 +3014,9 @@
 
 			}
 
-			// Change FTP Folder Function
+			// AT#FTPCWD — FTP Change Working Directory
+			// --> AT#FTPCWD="<folder>"\r\n
+			// <-- \r\nOK\r\n
 			bool FTPCWD(const char * _Folder) {
 
 				// Clear UART Buffer
@@ -2927,7 +3043,9 @@
 
 			}
 
-			// Get FTP File Size Function
+			// AT#FTPFSIZE — FTP File Size Query
+			// --> AT#FTPFSIZE="<filename>"\r\n
+			// <-- \r\n#FTPFSIZE: <bytes>\r\n\r\nOK\r\n
 			bool FTPFSIZE(const char * _FileName, uint32_t & _Length) {
 
 				// Clear UART Buffer
@@ -2968,7 +3086,9 @@
 
 			}
 
-			// Get FTP File to Buffer function
+			// AT#FTPGETPKT — FTP Get File into Packet Buffer (viewMode: 0=binary, 1=text)
+			// --> AT#FTPGETPKT="<filename>",<viewMode>\r\n
+			// <-- \r\nOK\r\n  (data then retrieved with FTPRECV)
 			bool FTPGETPKT(const char * _FileName, const uint8_t _ViewMode) {
 
 				// Clear UART Buffer
@@ -2996,7 +3116,9 @@
 
 			}
 
-			// Open FTP Connection Function
+			// AT#FTPOPEN — Open FTP Connection (mode: 0=active, 1=passive)
+			// --> AT#FTPOPEN="<server>","<user>","<pass>",<mode>\r\n
+			// <-- \r\nOK\r\n
 			bool FTPOPEN(const char * _Server, const char * _Username, const char * _Password, const uint8_t _Mode) {
 
 				// Clear UART Buffer
@@ -3028,7 +3150,9 @@
 
 			}
 
-			// Get FTP File From Buffer Function
+			// AT#FTPRECV — FTP Receive Packet Chunk (_Data must be >= _Size+30 bytes)
+			// --> AT#FTPRECV=<size>\r\n
+			// <-- \r\n#FTPRECV: <size>\r\n<data>\r\nOK\r\n
 			bool FTPRECV(const uint16_t _Size, char * _Data) {
 
 				// Clear UART Buffer
@@ -3071,7 +3195,9 @@
 
 			}
 
-			// Set FTP Time Out Function
+			// AT#FTPTO — FTP Session Timeout (seconds)
+			// --> AT#FTPTO=<timeout>\r\n
+			// <-- \r\nOK\r\n
 			bool FTPTO(const uint16_t _TOut) {
 
 				// Clear UART Buffer
@@ -3096,7 +3222,9 @@
 
 			}
 
-			// Set FTP File Transfer Type Function
+			// AT#FTPTYPE — FTP Transfer Type (0=binary, 1=ASCII)
+			// --> AT#FTPTYPE=<type>\r\n
+			// <-- \r\nOK\r\n
 			bool FTPTYPE(const uint8_t _Type) {
 
 				// Clear UART Buffer
@@ -3121,7 +3249,9 @@
 
 			}
 
-			// Soft Reset Function
+			// ATZ — Soft Reset / Restore Factory Profile
+			// --> ATZ<n>\r\n  (n=0=restore profile 0, 1=profile 1)
+			// <-- \r\nOK\r\n
 			bool Z(const uint8_t _Z) {
 
 				// Clear UART Buffer
@@ -3146,7 +3276,9 @@
 
 			}
 
-			// Detach From Network and Shut Down Modem Function
+			// AT#SHDN — Modem Shutdown (graceful network detach + power down)
+			// --> AT#SHDN\r\n
+			// <-- \r\nOK\r\n
 			bool SHDN(void) {
 
 				// Clear UART Buffer

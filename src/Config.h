@@ -3,7 +3,7 @@
  *	distributed without the express permission of Mehmet Gunce Akkoyun.
  *
  *	Library				: AT_Command
- *	Version				: 02.02.01
+ *	Version				: 02.02.03
  *
  *********************************************************************************/
 
@@ -21,6 +21,15 @@
 #endif
 #ifndef _PostMan_EndPoint_
 	#define _PostMan_EndPoint_ "/"
+#endif
+
+// IO Buffer Size — shared SRAM buffer used by every AT command function.
+// Override before #include to reduce SRAM on memory-constrained devices.
+// Minimum recommended: 64 (basic commands). For SRECV/FTPRECV: >= 512.
+// Default: 1024 bytes (handles all commands including large FTP/HTTP payloads).
+// ------------------------------------------------------------------------------
+#ifndef _IO_Buffer_Size
+	constexpr uint16_t _IO_Buffer_Size = 1024;
 #endif
 
 // Numeric Config Parameters

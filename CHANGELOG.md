@@ -12,6 +12,32 @@ All notable changes to this project will be documented in this file. The format 
 
 ---
 
+## [02.02.03] - 2026-05-09
+
+### Fixed
+
+- `CSQ`: `Serial_Buffer.Size` was `7`, allowing only 6 bytes to be captured. The response `\r\n+CSQ: 99,99\r\n\r\nOK\r\n` is 21 bytes — the `\r\nOK\r\n` pattern was never in the window, causing CSQ to always return `false` (timeout). Fixed to `25`.
+
+### Added
+
+- `_IO_Buffer_Size` moved to `Config.h` with `#ifndef` override guard. Users on RAM-constrained targets can now set `#define _IO_Buffer_Size 256` before including the library to reduce SRAM usage from 1024 B to their chosen size. Minimum recommended value depends on largest command used (e.g. 64 for basic init, 512 for SRECV/FTPRECV with large payloads).
+- AT protocol info block added to every protected function: a 2–4 line comment showing the exact AT command sent (`-->`), the modem response (`<--`), and relevant parameter notes. Matches the Telit LE910C1-EUX AT Commands Reference format.
+
+---
+
+## [02.02.02] - 2026-05-09
+
+### Fixed
+
+- `Read_UART_Buffer_Raw`: `GSM_Serial->read()` returns `-1` (cast to `0xFF`) when the UART buffer is empty. The previous code stored `0xFF` and advanced `Read_Order` unconditionally, inserting dozens of garbage bytes between real WebSocket frame bytes and corrupting frame parsing. Fixed by wrapping the store/check/advance block inside `if (_Byte >= 0)` after reading into a local `int`.
+- `Find` CME check: the fixed-offset pattern `_Buffer[_Size - 18]` underflows to a negative index for 1- and 2-digit CME error codes (e.g. `+CME ERROR: 3` → `_Size = 16`, `_Buffer[-2]` → undefined behavior). Replaced with `strstr(_Buffer, "+CME ERROR:") != NULL` plus tail `\r\n` check, which handles all code lengths correctly.
+- `Read_UART_Buffer`: removed two dead `\r\n` secondary-advance checks (lines that could never fire because those characters are already ASCII and advance via the `isAscii` path, leaving `'\0'` at the next position).
+- `CSQ`: RSSI mapping formula was `109 - (_CSQ * 2)` instead of `113 - (_CSQ * 2)`. All CSQ values 2–30 reported RSSI 4 dBm weaker than actual (e.g. CSQ=10 gave 89 instead of 93).
+- `CPIN`: `sscanf` format used `%09s` which stops at whitespace. Responses `SIM PIN` and `SIM PUK` were truncated to `"SIM"`, causing `strstr` checks to always fail and forcing `_Code = _SIM_UNKNOWN_` for PIN-required SIMs. Changed to `%09[^\r]` (read until carriage-return) which captures the full token including embedded space.
+- `CCID`: loop was missing a `_Buffer.Data_Order < 20` upper-bound guard (CGSN had the equivalent guard). A malformed modem response returning more than 20 digit characters could advance `Data_Order` past the 20-byte `_ICCID` buffer.
+
+---
+
 ## [02.02.01] - 2026-05-09
 
 ### Fixed
